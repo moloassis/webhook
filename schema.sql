@@ -1,7 +1,4 @@
--- Criar banco de dados se não existir (opcional, dependendo do ambiente VPS)
--- CREATE DATABASE IF NOT EXISTS seu_banco CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
--- USE seu_banco;
-
+-- Tabela para os Chamados/Alertas Ativos
 CREATE TABLE IF NOT EXISTS `chamados` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `nome_cliente` VARCHAR(255) DEFAULT NULL,
@@ -11,8 +8,20 @@ CREATE TABLE IF NOT EXISTS `chamados` (
     `criado_em` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Índice no status para otimizar a consulta do loop SSE (evita Table Scans constantes)
+-- Índices de performance para a tabela de chamados
 CREATE INDEX idx_chamados_status ON `chamados` (`status`);
-
--- Índice opcional para ordenação e relatórios
 CREATE INDEX idx_chamados_criado ON `chamados` (`criado_em`);
+
+-- Tabela para Auditoria Geral de Webhooks
+CREATE TABLE IF NOT EXISTS `webhook_logs` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `metodo` VARCHAR(10) NOT NULL,
+    `ip` VARCHAR(45) NOT NULL,
+    `payload` TEXT,
+    `status_resposta` INT NOT NULL,
+    `mensagem_resposta` VARCHAR(255),
+    `criado_em` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Índices de performance para a tabela de logs
+CREATE INDEX idx_webhook_logs_criado ON `webhook_logs` (`criado_em`);
