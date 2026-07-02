@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HelenaCRM - Central de Alertas em Tempo Real</title>
+    
+    <!-- Fonte Premium Outfit da Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-gradient: radial-gradient(circle at top, #120e2e 0%, #09090e 100%);
+            --panel-bg: rgba(20, 20, 35, 0.6);
+            --card-bg: rgba(30, 30, 48, 0.45);
+            --border-color: rgba(255, 255, 255, 0.07);
+            
+            /* Paleta de Cores de Eventos */
+            --color-atendimento: #ff4757;
+            --color-atendimento-glow: rgba(255, 71, 87, 0.4);
+            
+            --color-lead: #2ed573;
+            --color-lead-glow: rgba(46, 213, 115, 0.4);
+            
+            --color-sistema: #ffa502;
+            --color-sistema-glow: rgba(255, 165, 2, 0.4);
+            
+            --color-default: #1e90ff;
+            --color-default-glow: rgba(30, 144, 255, 0.4);
+            
+            --text-primary: #f1f2f6;
+            --text-secondary: #a4b0be;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Barra de Navegação Superior */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem 2rem;
+            background: rgba(10, 10, 18, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .logo-dot {
+            width: 12px;
+            height: 12px;
+            background-color: var(--color-atendimento);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--color-atendimento);
+            animation: pulse-logo 2s infinite;
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            background: linear-gradient(135deg, #fff 0%, #a4b0be 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Indicador de Status SSE */
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #ffa502;
+        }
+
+        .status-badge.connected .status-indicator {
+            background-color: var(--color-lead);
+            box-shadow: 0 0 8px var(--color-lead);
+            animation: pulse-green 1.5s infinite;
+        }
+
+        .status-badge.connecting .status-indicator {
+            background-color: #ffa502;
+            box-shadow: 0 0 8px #ffa502;
+            animation: pulse-yellow 1.5s infinite;
+        }
+
+        .status-badge.disconnected .status-indicator {
+            background-color: var(--color-atendimento);
+            box-shadow: 0 0 8px var(--color-atendimento);
+            animation: pulse-red 1.5s infinite;
+        }
+
+        /* Container Principal */
+        main {
+            flex: 1;
+            padding: 2rem;
+            max-width: 1400px;
+            width: 100%;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 2rem;
+        }
+
+        /* Painel Lateral de Controle e Simulador */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .panel-box {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            backdrop-filter: blur(16px);
+        }
+
+        .panel-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1.2rem;
+            color: var(--text-primary);
+            border-left: 3px solid var(--color-default);
+            padding-left: 8px;
+        }
+
+        /* Configurações de Áudio */
+        .audio-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .control-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .label-text {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        /* Toggle Button Customizado */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 46px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #3f3f5c;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--color-lead);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(22px);
+        }
+
+        /* Range Slider Customizado */
+        .range-slider {
+            width: 100%;
+            height: 6px;
+            background: #3f3f5c;
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .range-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--color-default);
+            cursor: pointer;
+            box-shadow: 0 0 8px var(--color-default);
+        }
+
+        /* Botão Premium */
+        .btn-premium {
+            background: linear-gradient(135deg, #2f3542 0%, #1e222b 100%);
+            border: 1px solid var(--border-color);
+            color: white;
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+            width: 100%;
+            text-align: center;
+        }
+
+        .btn-premium:hover {
+            border-color: var(--color-default);
+            box-shadow: 0 0 10px rgba(30, 144, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        /* Formulário do Simulador */
+        .sim-form {
+            display: flex;
+            flex-direction: column;
+            gap: 0.9rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .form-control {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.6rem;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            outline: none;
+            transition: border 0.3s;
+        }
+
+        .form-control:focus {
+            border-color: var(--color-default);
+        }
+
+        select.form-control {
+            cursor: pointer;
+        }
+
+        .btn-send {
+            background: linear-gradient(135deg, #1e90ff 0%, #0066cc 100%);
+            border: none;
+            color: white;
+            padding: 0.75rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            box-shadow: 0 4px 15px rgba(30, 144, 255, 0.3);
+            transition: all 0.3s;
+        }
+
+        .btn-send:hover {
+            box-shadow: 0 4px 20px rgba(30, 144, 255, 0.5);
+            transform: translateY(-1px);
+        }
+
+        /* Banner de permissão de áudio */
+        .audio-banner {
+            background: linear-gradient(135deg, rgba(255, 165, 2, 0.15) 0%, rgba(255, 71, 87, 0.15) 100%);
+            border: 1px solid rgba(255, 165, 2, 0.3);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            animation: pulse-border 2s infinite;
+        }
+
+        .audio-banner-text {
+            font-size: 0.85rem;
+            color: #ffb830;
+            line-height: 1.4;
+        }
+
+        .audio-banner-btn {
+            background: #ffa502;
+            color: #000;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .audio-banner-btn:hover {
+            background: #ffb830;
+        }
+
+        /* Painel Central de Alertas */
+        .dashboard-content {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        /* Abas de Filtros */
+        .filter-tabs {
+            display: flex;
+            gap: 0.8rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.8rem;
+        }
+
+        .tab {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            position: relative;
+            transition: color 0.3s;
+        }
+
+        .tab:hover {
+            color: var(--text-primary);
+        }
+
+        .tab.active {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .tab.active::after {
+            content: "";
+            position: absolute;
+            bottom: -0.8rem;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background-color: var(--color-default);
+            box-shadow: 0 0 8px var(--color-default);
+        }
+
+        /* Grid de Cards de Alertas */
+        .alerts-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        /* Card de Notificação Individual */
+        .alert-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1.5rem;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            animation: slide-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .alert-card:hover {
+            transform: scale(1.01) translateY(-2px);
+            background: rgba(35, 35, 58, 0.6);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Efeitos e Bordas Glow baseados no tipo */
+        .alert-card.type-atendimento_humano {
+            border-left: 4px solid var(--color-atendimento);
+            box-shadow: 0 0 15px rgba(255, 71, 87, 0.08);
+        }
+        .alert-card.type-atendimento_humano::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--color-atendimento);
+            box-shadow: 0 0 15px var(--color-atendimento);
+            animation: card-glow-pulse 1.5s infinite;
+        }
+
+        .alert-card.type-novo_lead {
+            border-left: 4px solid var(--color-lead);
+            box-shadow: 0 0 15px rgba(46, 213, 115, 0.08);
+        }
+
+        .alert-card.type-alerta_sistema {
+            border-left: 4px solid var(--color-sistema);
+            box-shadow: 0 0 15px rgba(255, 165, 2, 0.08);
+        }
+
+        .alert-card.type-default {
+            border-left: 4px solid var(--color-default);
+            box-shadow: 0 0 15px rgba(30, 144, 255, 0.08);
+        }
+
+        /* Informações do Card */
+        .card-details {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex: 1;
+        }
+
+        .card-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 45px;
+            height: 45px;
+            border-radius: 10px;
+            font-size: 1.3rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .type-atendimento_humano .card-icon {
+            color: var(--color-atendimento);
+            background: rgba(255, 71, 87, 0.1);
+            animation: shake 0.5s infinite alternate;
+        }
+
+        .type-novo_lead .card-icon {
+            color: var(--color-lead);
+            background: rgba(46, 213, 115, 0.1);
+        }
+
+        .type-alerta_sistema .card-icon {
+            color: var(--color-sistema);
+            background: rgba(255, 165, 2, 0.1);
+        }
+
+        .type-default .card-icon {
+            color: var(--color-default);
+            background: rgba(30, 144, 255, 0.1);
+        }
+
+        .card-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .card-header-row {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+        }
+
+        .client-name {
+            font-size: 1.05rem;
+            font-weight: 600;
+        }
+
+        .badge-type {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            letter-spacing: 0.5px;
+        }
+
+        .type-atendimento_humano .badge-type {
+            background: rgba(255, 71, 87, 0.15);
+            color: var(--color-atendimento);
+            border: 1px solid rgba(255, 71, 87, 0.3);
+        }
+
+        .type-novo_lead .badge-type {
+            background: rgba(46, 213, 115, 0.15);
+            color: var(--color-lead);
+            border: 1px solid rgba(46, 213, 115, 0.3);
+        }
+
+        .type-alerta_sistema .badge-type {
+            background: rgba(255, 165, 2, 0.15);
+            color: var(--color-sistema);
+            border: 1px solid rgba(255, 165, 2, 0.3);
+        }
+
+        .type-default .badge-type {
+            background: rgba(30, 144, 255, 0.15);
+            color: var(--color-default);
+            border: 1px solid rgba(30, 144, 255, 0.3);
+        }
+
+        .card-msg {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .card-time {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* Botões do Card */
+        .card-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-action {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.5rem 0.9rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-action:hover {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .btn-action.btn-resolve:hover {
+            background: var(--color-lead);
+            color: #000;
+            border-color: var(--color-lead);
+            box-shadow: 0 0 10px rgba(46, 213, 115, 0.3);
+        }
+
+        /* Estado Vazio */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 5rem 2rem;
+            background: var(--panel-bg);
+            border: 1px dashed rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            text-align: center;
+            gap: 1rem;
+        }
+
+        .empty-icon {
+            font-size: 3rem;
+            color: rgba(255, 255, 255, 0.1);
+            position: relative;
+            animation: float 4s ease-in-out infinite;
+        }
+
+        .empty-text {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        /* Animações e Keyframes */
+        @keyframes pulse-logo {
+            0% { box-shadow: 0 0 5px var(--color-atendimento); }
+            50% { box-shadow: 0 0 20px var(--color-atendimento); }
+            100% { box-shadow: 0 0 5px var(--color-atendimento); }
+        }
+
+        @keyframes pulse-green {
+            0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(46, 213, 115, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(46, 213, 115, 0); }
+            100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(46, 213, 115, 0); }
+        }
+
+        @keyframes pulse-yellow {
+            0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(255, 165, 2, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(255, 165, 2, 0); }
+            100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(255, 165, 2, 0); }
+        }
+
+        @keyframes pulse-red {
+            0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(255, 71, 87, 0); }
+            100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(255, 71, 87, 0); }
+        }
+
+        @keyframes pulse-border {
+            0% { border-color: rgba(255, 165, 2, 0.3); }
+            50% { border-color: rgba(255, 165, 2, 0.7); }
+            100% { border-color: rgba(255, 165, 2, 0.3); }
+        }
+
+        @keyframes card-glow-pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        @keyframes slide-in {
+            from {
+                opacity: 0;
+                transform: translateY(20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @keyframes shake {
+            0% { transform: rotate(0deg); }
+            20% { transform: rotate(-8deg); }
+            40% { transform: rotate(8deg); }
+            60% { transform: rotate(-5deg); }
+            80% { transform: rotate(5deg); }
+            100% { transform: rotate(0deg); }
+        }
+
+        @keyframes fade-out {
+            to {
+                opacity: 0;
+                transform: scale(0.9) translateY(-15px);
+            }
+        }
+
+        /* Responsividade */
+        @media (max-width: 900px) {
+            main {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header / Navbar -->
+    <header>
+        <div class="logo-area">
+            <div class="logo-dot"></div>
+            <h1>Central de Alertas HelenaCRM</h1>
+        </div>
+        
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <!-- Link para ver o inspetor completo de webhooks -->
+            <a href="logs.php" style="background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color); color: var(--text-primary); text-decoration: none; padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: all 0.3s;" onmouseover="this.style.borderColor='var(--color-default)'; this.style.background='rgba(30, 144, 255, 0.1)';" onmouseout="this.style.borderColor='var(--border-color)'; this.style.background='rgba(255, 255, 255, 0.05)';">
+                🔍 Ver Todos os Webhooks
+            </a>
+            
+            <!-- Badge de Conexão SSE -->
+            <div id="statusBadge" class="status-badge connecting">
+                <span class="status-indicator"></span>
+                <span id="statusText">Conectando...</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Conteúdo Principal -->
+    <main>
+        
+        <!-- Sidebar: Configurações e Simulador Webhook -->
+        <div class="sidebar">
+            
+            <!-- Painel de Controles de Áudio -->
+            <div class="panel-box">
+                <h2 class="panel-title">Notificações</h2>
+                <div class="audio-controls">
+                    <div class="control-row">
+                        <span class="label-text">Habilitar Alerta Sonoro</span>
+                        <label class="switch">
+                            <input type="checkbox" id="audioToggle" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="control-row" style="flex-direction: column; align-items: flex-start; gap: 0.4rem;">
+                        <span class="label-text">Volume</span>
+                        <input type="range" id="volumeControl" class="range-slider" min="0" max="100" value="80">
+                    </div>
+                    <button id="btnTestSound" class="btn-premium">Testar Áudio Sintético 🔊</button>
+                </div>
+            </div>
+
+            <!-- Webhook Simulator (Superútil para testes rápidos e demonstração) -->
+            <div class="panel-box">
+                <h2 class="panel-title">Simulador de Webhook</h2>
+                <form id="simulatorForm" class="sim-form" onsubmit="enviarSimulacao(event)">
+                    <div class="form-group">
+                        <label class="label-text" for="sim_nome">Nome do Cliente</label>
+                        <input type="text" id="sim_nome" class="form-control" placeholder="Ex: Felipe Amorim" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="label-text" for="sim_tipo">Tipo do Evento</label>
+                        <select id="sim_tipo" class="form-control" onchange="atualizarMensagemPadrao()">
+                            <option value="atendimento_humano">Atendimento Humano (Urgente)</option>
+                            <option value="novo_lead">Novo Lead Qualificado</option>
+                            <option value="alerta_sistema">Alerta de Sistema</option>
+                            <option value="default">Informação Geral</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="label-text" for="sim_msg">Mensagem/Payload</label>
+                        <textarea id="sim_msg" class="form-control" rows="2" placeholder="Descreva os detalhes..."></textarea>
+                    </div>
+                    <button type="submit" class="btn-send">Disparar Webhook (POST)</button>
+                </form>
+            </div>
+            
+        </div>
+
+        <!-- Painel Central de Alertas -->
+        <div class="dashboard-content">
+            
+            <!-- Banner de Permissão de Áudio do Navegador -->
+            <div id="audioBanner" class="audio-banner">
+                <div class="audio-banner-text">
+                    <strong>Atenção:</strong> O navegador bloqueia sons automáticos antes da primeira interação. Clique em ativar para permitir alertas sonoros.
+                </div>
+                <button onclick="ativarContextoAudio()" class="audio-banner-btn">Ativar Sons</button>
+            </div>
+
+            <!-- Filtros de Visualização -->
+            <div class="filter-tabs" style="display: flex; align-items: center; width: 100%;">
+                <button class="tab active" data-filter="todos">Todos (<span id="count-todos">0</span>)</button>
+                <button class="tab" data-filter="atendimento_humano">Atendimentos (<span id="count-atendimento">0</span>)</button>
+                <button class="tab" data-filter="novo_lead">Leads (<span id="count-lead">0</span>)</button>
+                <button class="tab" data-filter="alerta_sistema">Erros/Avisos (<span id="count-sistema">0</span>)</button>
+                
+                <!-- Botão para Recarregar Histórico Manualmente -->
+                <button id="btnRefreshHistory" style="margin-left: auto; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color); color: var(--text-secondary); padding: 0.4rem 0.8rem; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 500; transition: all 0.3s; display: flex; align-items: center; gap: 6px;" onmouseover="this.style.borderColor='var(--color-default)'; this.style.color='var(--text-primary)';" onmouseout="this.style.borderColor='var(--border-color)'; this.style.color='var(--text-secondary)';">
+                    🔄 Recarregar Histórico
+                </button>
+            </div>
+
+            <!-- Grid de Alertas em Tempo Real -->
+            <div id="alertsGrid" class="alerts-grid">
+                
+                <!-- Estado Inicial Vazio -->
+                <div id="emptyState" class="empty-state">
+                    <div class="empty-icon">🔔</div>
+                    <p class="empty-text">Aguardando novos chamados em tempo real...</p>
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <script>
+        // Estado do Aplicativo
+        let chamadosList = [];
+        let filterActive = 'todos';
+        let audioContext = null;
+        let audioMuted = false;
+        
+        // Elementos DOM
+        const statusBadge = document.getElementById('statusBadge');
+        const statusText = document.getElementById('statusText');
+        const alertsGrid = document.getElementById('alertsGrid');
+        const emptyState = document.getElementById('emptyState');
+        const audioToggle = document.getElementById('audioToggle');
+        const volumeControl = document.getElementById('volumeControl');
+        const btnTestSound = document.getElementById('btnTestSound');
+        const audioBanner = document.getElementById('audioBanner');
+        const simNome = document.getElementById('sim_nome');
+        const simTipo = document.getElementById('sim_tipo');
+        const simMsg = document.getElementById('sim_msg');
+
+        // Configuração Inicial de Mensagem de Simulação
+        function atualizarMensagemPadrao() {
+            const tipo = simTipo.value;
+            if (tipo === 'atendimento_humano') {
+                simMsg.value = 'Solicitou transferência do chatbot HelenaCRM para o atendente humano.';
+            } else if (tipo === 'novo_lead') {
+                simMsg.value = 'Concluiu a etapa de qualificação no bot com score alto.';
+            } else if (tipo === 'alerta_sistema') {
+                simMsg.value = 'Falha crítica na API de pagamentos (Gateway de Envio).';
+            } else {
+                simMsg.value = 'Evento genérico recebido da integração.';
+            }
+        }
+        atualizarMensagemPadrao();
+
+        // 1. Lógica do Web Audio API (Sons Sintéticos em Fallback)
+        function ativandoAudioCtx() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            audioBanner.style.display = 'none';
+        }
+
+        function ativarContextoAudio() {
+            ativandoAudioCtx();
+            tocarSomSintetico('default');
+        }
+
+        // Tenta tocar notificacao.mp3. Se falhar ou der erro (não encontrado), usa sintetizador
+        function tocarAlertaSonoro(tipo) {
+            if (audioMuted || !audioToggle.checked) return;
+
+            const mp3 = new Audio('notificacao.mp3');
+            mp3.volume = volumeControl.value / 100;
+            
+            mp3.play().catch(err => {
+                console.warn("Arquivo notificacao.mp3 indisponível ou bloqueado. Usando som sintético Web Audio API.");
+                tocarSomSintetico(tipo);
+            });
+        }
+
+        // Gera sons diferentes para cada tipo de evento usando osciladores
+        function tocarSomSintetico(tipo) {
+            try {
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioContext.state === 'suspended') {
+                    // Se estiver suspenso, não toca e exibe o banner novamente
+                    audioBanner.style.display = 'flex';
+                    return;
+                }
+
+                const volume = volumeControl.value / 100;
+                
+                // Volume geral
+                const gainNode = audioContext.createGain();
+                gainNode.gain.setValueAtTime(volume * 0.15, audioContext.currentTime); // Volume atenuado para não estourar
+                gainNode.connect(audioContext.destination);
+
+                if (tipo === 'atendimento_humano') {
+                    // Som Urgente (Bitonal / Sirene dupla)
+                    const osc1 = audioContext.createOscillator();
+                    osc1.type = 'sine';
+                    osc1.frequency.setValueAtTime(880, audioContext.currentTime); // Nota La
+                    osc1.connect(gainNode);
+                    osc1.start(audioContext.currentTime);
+                    osc1.stop(audioContext.currentTime + 0.12);
+
+                    const osc2 = audioContext.createOscillator();
+                    osc2.type = 'sine';
+                    osc2.frequency.setValueAtTime(698.46, audioContext.currentTime + 0.16); // Nota Fa
+                    osc2.connect(gainNode);
+                    osc2.start(audioContext.currentTime + 0.16);
+                    osc2.stop(audioContext.currentTime + 0.32);
+                    
+                    const osc3 = audioContext.createOscillator();
+                    osc3.type = 'sine';
+                    osc3.frequency.setValueAtTime(880, audioContext.currentTime + 0.36); // Nota La
+                    osc3.connect(gainNode);
+                    osc3.start(audioContext.currentTime + 0.36);
+                    osc3.stop(audioContext.currentTime + 0.5);
+
+                } else if (tipo === 'novo_lead') {
+                    // Som de Sucesso (Arpejo musical alegre de 3 notas)
+                    const notas = [392.00, 523.25, 659.25]; // G4, C5, E5
+                    notas.forEach((freq, idx) => {
+                        const osc = audioContext.createOscillator();
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(freq, audioContext.currentTime + (idx * 0.08));
+                        
+                        const indGain = audioContext.createGain();
+                        indGain.gain.setValueAtTime(volume * 0.15, audioContext.currentTime + (idx * 0.08));
+                        indGain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + (idx * 0.08) + 0.2);
+                        
+                        osc.connect(indGain);
+                        indGain.connect(audioContext.destination);
+                        
+                        osc.start(audioContext.currentTime + (idx * 0.08));
+                        osc.stop(audioContext.currentTime + (idx * 0.08) + 0.25);
+                    });
+
+                } else if (tipo === 'alerta_sistema') {
+                    // Som de Aviso / Erro (Onda dente-de-serra grave de alerta rápido)
+                    const osc = audioContext.createOscillator();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(180, audioContext.currentTime);
+                    
+                    const indGain = audioContext.createGain();
+                    indGain.gain.setValueAtTime(volume * 0.1, audioContext.currentTime);
+                    indGain.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.4);
+                    
+                    osc.connect(indGain);
+                    indGain.connect(audioContext.destination);
+                    
+                    osc.start(audioContext.currentTime);
+                    osc.stop(audioContext.currentTime + 0.4);
+                } else {
+                    // Som Informativo Padrão (Plop suave)
+                    const osc = audioContext.createOscillator();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
+                    osc.frequency.exponentialRampToValueAtTime(261.63, audioContext.currentTime + 0.12); // C4
+                    
+                    const indGain = audioContext.createGain();
+                    indGain.gain.setValueAtTime(volume * 0.15, audioContext.currentTime);
+                    indGain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.15);
+                    
+                    osc.connect(indGain);
+                    indGain.connect(audioContext.destination);
+                    
+                    osc.start(audioContext.currentTime);
+                    osc.stop(audioContext.currentTime + 0.18);
+                }
+            } catch (e) {
+                console.error("Erro ao reproduzir áudio:", e);
+            }
+        }
+
+        // Listener dos controles de som
+        btnTestSound.addEventListener('click', () => {
+            ativandoAudioCtx();
+            tocarSomSintetico(simTipo.value);
+        });
+
+        audioToggle.addEventListener('change', () => {
+            audioMuted = !audioToggle.checked;
+        });
+
+        // 2. Conectar com o SSE-STREAM (EventSource)
+        function iniciarConexaoSSE() {
+            // Instancia o EventSource nativo apontando para o endpoint PHP
+            const source = new EventSource('sse-stream.php');
+
+            // Quando a conexão é aberta com sucesso
+            source.onopen = function() {
+                statusBadge.className = 'status-badge connected';
+                statusText.textContent = 'Monitorando Realtime';
+                console.log("SSE conectado!");
+            };
+
+            // Quando ocorrem erros de conexão (ex: timeout da VPS, reinicializações de rede)
+            // O EventSource nativo reconecta AUTOMATICAMENTE em caso de falha.
+            source.onerror = function(err) {
+                statusBadge.className = 'status-badge disconnected';
+                statusText.textContent = 'Desconectado - Reconectando...';
+                console.warn("SSE desconectado. Tentando reconectar automaticamente...", err);
+            };
+
+            // Ouvinte de mensagens SSE recebidas do endpoint PHP
+            source.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    
+                    // Valida se o objeto não é nulo/heartbeat
+                    if (data && data.id) {
+                        adicionarChamado(data);
+                    }
+                } catch (e) {
+                    console.error("Erro ao decodificar JSON do evento SSE:", e);
+                }
+            };
+        }
+
+        // 3. Processar novo Chamado/Evento e injetar no Dashboard
+        function adicionarChamado(chamado) {
+            // Evita duplicados na lista da sessão
+            if (chamadosList.some(item => item.id === chamado.id)) return;
+
+            // Insere no início da array local (mais recente primeiro)
+            chamadosList.unshift(chamado);
+            
+            // Toca a notificação correspondente
+            tocarAlertaSonoro(chamado.tipo);
+            
+            // Atualiza a renderização na tela
+            renderizarAlertas();
+            atualizarContadores();
+        }
+
+        // Remove o card visualmente com animação e remove da lista local
+        function resolverChamado(id, btnElement) {
+            const card = btnElement.closest('.alert-card');
+            card.style.animation = 'fade-out 0.3s forwards';
+            
+            setTimeout(() => {
+                chamadosList = chamadosList.filter(item => item.id !== id);
+                renderizarAlertas();
+                atualizarContadores();
+            }, 300);
+        }
+
+        // Renderiza o grid de alertas baseando-se no filtro ativo
+        function renderizarAlertas() {
+            // Filtrar itens
+            const itensFiltrados = chamadosList.filter(item => {
+                if (filterActive === 'todos') return true;
+                return item.tipo === filterActive;
+            });
+
+            // Limpa o grid
+            alertsGrid.innerHTML = '';
+
+            if (itensFiltrados.length === 0) {
+                alertsGrid.appendChild(emptyState);
+                emptyState.style.display = 'flex';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+
+            // Montar cada card dinamicamente
+            itensFiltrados.forEach(item => {
+                const card = document.createElement('div');
+                card.className = `alert-card type-${item.tipo}`;
+                
+                // Mapear ícones baseados no tipo de evento
+                let icon = '🔔';
+                let labelTipo = 'Notificação';
+                
+                if (item.tipo === 'atendimento_humano') {
+                    icon = '🚨';
+                    labelTipo = 'Atendimento Humano';
+                } else if (item.tipo === 'novo_lead') {
+                    icon = '💵';
+                    labelTipo = 'Novo Lead';
+                } else if (item.tipo === 'alerta_sistema') {
+                    icon = '⚠️';
+                    labelTipo = 'Alerta Sistema';
+                } else {
+                    icon = 'ℹ️';
+                    labelTipo = 'Info';
+                }
+
+                // Formatar hora
+                const horaFormatada = new Date(item.criado_em.replace(/-/g, "/")).toLocaleTimeString('pt-BR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+
+                card.innerHTML = `
+                    <div class="card-details">
+                        <div class="card-icon">${icon}</div>
+                        <div class="card-info">
+                            <div class="card-header-row">
+                                <span class="client-name">${item.nome_cliente || 'N/A'}</span>
+                                <span class="badge-type">${labelTipo}</span>
+                                <span class="card-time">🕒 ${horaFormatada}</span>
+                            </div>
+                            <p class="card-msg">${item.mensagem || 'Sem mensagem descritiva.'}</p>
+                        </div>
+                    </div>
+                    <div class="card-actions">
+                        <button class="btn-action btn-resolve" onclick="resolverChamado(${item.id}, this)">Resolver</button>
+                    </div>
+                `;
+                alertsGrid.appendChild(card);
+            });
+        }
+
+        // Atualizar badges numéricas das abas superiores
+        function atualizarContadores() {
+            document.getElementById('count-todos').textContent = chamadosList.length;
+            
+            const contadores = {
+                atendimento_humano: 0,
+                novo_lead: 0,
+                alerta_sistema: 0
+            };
+            
+            chamadosList.forEach(item => {
+                if (contadores[item.tipo] !== undefined) {
+                    contadores[item.tipo]++;
+                }
+            });
+
+            document.getElementById('count-atendimento').textContent = contadores.atendimento_humano;
+            document.getElementById('count-lead').textContent = contadores.novo_lead;
+            document.getElementById('count-sistema').textContent = contadores.alerta_sistema;
+        }
+
+        // Configuração das Abas de Filtros
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelector('.tab.active').classList.remove('active');
+                tab.classList.add('active');
+                filterActive = tab.getAttribute('data-filter');
+                renderizarAlertas();
+            });
+        });
+
+        // 4. Lógica do Webhook Simulator
+        // Executa um disparo HTTP POST nativo para 'webhook.php' e simula o backend do HelenaCRM
+        function enviarSimulacao(e) {
+            e.preventDefault();
+            ativandoAudioCtx(); // Desbloqueia áudio caso o usuário clique em enviar primeiro
+
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.textContent = 'Enviando...';
+
+            const payload = {
+                nome_cliente: simNome.value,
+                tipo: simTipo.value,
+                mensagem: simMsg.value
+            };
+
+            fetch('webhook.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(res => {
+                if (!res.ok) {
+                    throw new Error('Falha no simulador: Status HTTP ' + res.status);
+                }
+                return res.json();
+            })
+            .then(data => {
+                console.log('Resposta do simulador de webhook:', data);
+                // Limpar campos de input mantendo o tipo
+                simNome.value = '';
+                simNome.focus();
+            })
+            .catch(err => {
+                alert('Erro ao disparar webhook de simulação. Verifique se o PHP está ativo no localhost e a conexão do banco funciona!\nErro: ' + err.message);
+                console.error(err);
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.textContent = 'Disparar Webhook (POST)';
+            });
+        }
+
+        // Função para buscar o histórico de chamados manualmente ou no load
+        function carregarHistorico() {
+            const btn = document.getElementById('btnRefreshHistory');
+            if (btn) {
+                btn.textContent = '🔄 Carregando...';
+                btn.style.opacity = '0.7';
+            }
+
+            return fetch('historico.php')
+                .then(res => {
+                    if (!res.ok) throw new Error('Falha HTTP: ' + res.status);
+                    return res.json();
+                })
+                .then(dados => {
+                    if (Array.isArray(dados)) {
+                        // Limpa e atualiza com os dados do banco
+                        chamadosList = dados;
+                        renderizarAlertas();
+                        atualizarContadores();
+                    }
+                })
+                .catch(err => {
+                    console.warn('Não foi possível carregar o histórico de chamados:', err);
+                })
+                .finally(() => {
+                    if (btn) {
+                        btn.textContent = '🔄 Recarregar Histórico';
+                        btn.style.opacity = '1';
+                    }
+                });
+        }
+
+        // Iniciar tudo ao carregar a página
+        window.addEventListener('DOMContentLoaded', () => {
+            // 1. Carrega o histórico inicial
+            carregarHistorico().finally(() => {
+                // 2. Conecta ao canal de eventos em tempo real (SSE)
+                iniciarConexaoSSE();
+            });
+
+            // 3. Ouvinte para recarregar manual do histórico ao clicar no botão
+            document.getElementById('btnRefreshHistory').addEventListener('click', carregarHistorico);
+        });
+    </script>
+</body>
+</html>
