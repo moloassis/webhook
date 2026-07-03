@@ -41,7 +41,13 @@ try {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
     // 3. Verificações incrementais (Migrations)
-    // Garante que o ENUM de status seja ('pendente', 'resolvido')
+    // Para evitar o erro 1265 (Data truncated), primeiro expandimos o ENUM para aceitar 'notificado' e 'resolvido'
+    $db->exec("ALTER TABLE `chamados` MODIFY COLUMN `status` ENUM('pendente', 'notificado', 'resolvido') NOT NULL DEFAULT 'pendente'");
+    
+    // Convertemos qualquer registro antigo que esteja como 'notificado' para o novo status 'resolvido'
+    $db->exec("UPDATE `chamados` SET `status` = 'resolvido' WHERE `status` = 'notificado'");
+    
+    // Agora que nenhum registro usa 'notificado', podemos restringir o ENUM de forma limpa para ('pendente', 'resolvido')
     $db->exec("ALTER TABLE `chamados` MODIFY COLUMN `status` ENUM('pendente', 'resolvido') NOT NULL DEFAULT 'pendente'");
     
     // Se você já tiver a tabela chamados mas ela não contiver 'tipo' ou 'mensagem', nós a alteramos.
