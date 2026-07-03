@@ -837,7 +837,9 @@
         // Configuração Inicial de Mensagem de Simulação
         function atualizarMensagemPadrao() {
             const tipo = simTipo.value;
-            if (tipo === 'SESSION_COMPLETE') {
+            if (tipo === 'CONTACT_TAG_UPDATE') {
+                simMsg.value = 'ATENDIMENTO HUMANO';
+            } else if (tipo === 'SESSION_COMPLETE') {
                 simMsg.value = 'Sua conversa está sendo transferida. Por favor, aguarde um momento.';
             } else if (tipo === 'SESSION_NEW') {
                 simMsg.value = 'Nova conversa iniciada pelo WhatsApp.';
@@ -858,6 +860,7 @@
             
             // Atendimento Humano (Urgente)
             if (tipo === 'atendimento_humano' || 
+                tipo === 'CONTACT_TAG_UPDATE' ||
                 (tipo === 'SESSION_COMPLETE' && /(transferida|aguarde|humano|suporte)/i.test(msg)) ||
                 (/(PANEL_CARD_STEP_CHANGE|PANEL_CARD_UPDATE)/.test(tipo) && /(humano|suporte|atendente|human)/i.test(msg))) {
                 return {
@@ -1230,7 +1233,14 @@
                 content: {}
             };
 
-            if (event === 'SESSION_COMPLETE') {
+            if (event === 'CONTACT_TAG_UPDATE') {
+                payload.content = {
+                    id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : 'sim-id-' + Math.random(),
+                    name: nome,
+                    phonenumberFormatted: '(22) 98131-0167',
+                    tags: [msg] // A tag a ser adicionada/atualizada (ex: ATENDIMENTO HUMANO)
+                };
+            } else if (event === 'SESSION_COMPLETE') {
                 payload.content = {
                     id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : 'sim-id-' + Math.random(),
                     status: 'COMPLETED',

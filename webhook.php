@@ -130,6 +130,23 @@ if ($eventType) {
             $criarChamadoAtivo = true; // Exibe alerta suave
             break;
 
+        case 'CONTACT_TAG_UPDATE':
+            $tipoEvent = 'CONTACT_TAG_UPDATE';
+            $nomeCliente = $dados['content']['name'] ?? 'Desconhecido';
+            $tags = $dados['content']['tags'] ?? [];
+            
+            // Converte todas as tags para minúsculo para busca segura e sem erros de caixa alta
+            $tagsMinusculas = array_map(function($t) { return mb_strtolower(trim($t)); }, $tags);
+            
+            if (in_array('atendimento humano', $tagsMinusculas)) {
+                $mensagem = "Cliente etiquetado para Atendimento Humano no CRM.";
+                $criarChamadoAtivo = true; // Dispara alerta vermelho na tela do atendente
+            } else {
+                $mensagem = "Tags atualizadas do contato: " . implode(', ', $tags);
+                $criarChamadoAtivo = false; // Apenas entra no log de histórico
+            }
+            break;
+
         case 'SESSION_COMPLETE':
             $tipoEvent = 'SESSION_COMPLETE';
             $nomeCliente = $dados['content']['contactDetails']['name'] ?? 'Desconhecido';
