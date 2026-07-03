@@ -20,7 +20,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'clear') {
 
 // Buscar os últimos 100 logs registrados
 try {
-    $sql = "SELECT id, metodo, ip, payload, status_resposta, mensagem_resposta, criado_em 
+    $sql = "SELECT id, metodo, ip, event_type, payload, status_resposta, mensagem_resposta, criado_em 
             FROM webhook_logs 
             ORDER BY id DESC 
             LIMIT 100";
@@ -349,6 +349,7 @@ foreach ($logs as $log) {
                             <tr>
                                 <th style="width: 180px;">Data/Hora</th>
                                 <th style="width: 140px;">IP Remetente</th>
+                                <th style="width: 180px;">Tipo de Evento</th>
                                 <th style="width: 80px;">Método</th>
                                 <th style="width: 100px;">Status HTTP</th>
                                 <th>Resposta da API</th>
@@ -371,6 +372,9 @@ foreach ($logs as $log) {
                                 <tr class="log-row">
                                     <td style="color: var(--text-secondary);"><?= $dataLog ?></td>
                                     <td style="font-family: monospace; font-size: 0.85rem;"><?= htmlspecialchars($log['ip']) ?></td>
+                                    <td style="font-family: monospace; font-size: 0.85rem; font-weight: 600; color: #ffb830;">
+                                        <?= htmlspecialchars($log['event_type'] ?: 'Manual/Fallback') ?>
+                                    </td>
                                     <td style="font-weight: 700; color: var(--success-color);"><?= htmlspecialchars($log['metodo']) ?></td>
                                     <td>
                                         <span class="badge <?= $badgeClass ?>"><?= $status ?></span>
@@ -381,7 +385,7 @@ foreach ($logs as $log) {
                                     </td>
                                 </tr>
                                 <tr>
-                                    <td colspan="6" style="padding: 0; border: none;">
+                                    <td colspan="7" style="padding: 0; border: none;">
                                         <div id="payload-<?= $log['id'] ?>" class="payload-container"><?= htmlspecialchars(json_encode(json_decode($log['payload']), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) ?: $log['payload']) ?></div>
                                     </td>
                                 </tr>

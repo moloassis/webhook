@@ -20,10 +20,13 @@ function enviarRespostaELog(int $statusCode, bool $sucesso, string $mensagemResp
     // 1. Gravar o log da requisição na tabela `webhook_logs`
     try {
         $db = obterConexao();
-        $sqlLog = "INSERT INTO webhook_logs (metodo, ip, payload, status_resposta, mensagem_resposta) 
-                   VALUES (:metodo, :ip, :payload, :status_resposta, :mensagem_resposta)";
+        $sqlLog = "INSERT INTO webhook_logs (metodo, ip, event_type, payload, status_resposta, mensagem_resposta) 
+                   VALUES (:metodo, :ip, :event_type, :payload, :status_resposta, :mensagem_resposta)";
         
         $stmtLog = $db->prepare($sqlLog);
+        
+        // Tenta obter o eventType do payload decodificado
+        $eventTypeLog = isset($dados['eventType']) ? trim(filter_var($dados['eventType'], FILTER_SANITIZE_SPECIAL_CHARS)) : null;
         
         // Se não tiver body bruto, usa o array de dados decodificado
         $payloadLog = !empty($dadosBrutos) ? $dadosBrutos : json_encode($dados, JSON_UNESCAPED_UNICODE);
@@ -31,6 +34,7 @@ function enviarRespostaELog(int $statusCode, bool $sucesso, string $mensagemResp
         $stmtLog->execute([
             ':metodo' => $_SERVER['REQUEST_METHOD'] ?? 'POST',
             ':ip' => $_SERVER['REMOTE_ADDR'] ?? 'desconhecido',
+            ':event_type' => $eventTypeLog,
             ':payload' => $payloadLog,
             ':status_resposta' => $statusCode,
             ':mensagem_resposta' => $mensagemResponse

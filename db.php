@@ -25,6 +25,9 @@ function obterConexao(): PDO {
             ];
 
             $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
+            
+            // Configura o fuso horário da sessão do banco de dados para UTC-3 (Brasil)
+            $pdo->exec("SET time_zone = '-03:00'");
         } catch (PDOException $e) {
             // Registra o erro internamente com segurança
             registrarErro("Falha na conexão PDO: " . $e->getMessage(), [

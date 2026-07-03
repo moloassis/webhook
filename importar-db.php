@@ -66,16 +66,24 @@ try {
         $db->exec("CREATE INDEX idx_chamados_criado ON `chamados` (`criado_em`)");
     } catch (PDOException $e) { /* Índice já existente, ignorar */ }
 
-    // 4. Garante a criação da tabela webhook_logs e seu índice
+    // 4. Garante a criação da tabela webhook_logs
     $db->exec("CREATE TABLE IF NOT EXISTS `webhook_logs` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,
         `metodo` VARCHAR(10) NOT NULL,
         `ip` VARCHAR(45) NOT NULL,
+        `event_type` VARCHAR(100) DEFAULT NULL,
         `payload` TEXT,
         `status_resposta` INT NOT NULL,
         `mensagem_resposta` VARCHAR(255),
         `criado_em` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+    // Verificar e Adicionar coluna 'event_type' na tabela webhook_logs se ela já existia antes
+    $checarEvType = $db->query("SHOW COLUMNS FROM `webhook_logs` LIKE 'event_type'")->fetchAll();
+    if (empty($checarEvType)) {
+        $db->exec("ALTER TABLE `webhook_logs` ADD COLUMN `event_type` VARCHAR(100) DEFAULT NULL AFTER `ip`");
+        echo "<p class='success'>✔ Coluna 'event_type' adicionada com sucesso à tabela webhook_logs!</p>";
+    }
 
     try {
         $db->exec("CREATE INDEX idx_webhook_logs_criado ON `webhook_logs` (`criado_em`)");

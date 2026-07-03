@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS `webhook_logs` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `metodo` VARCHAR(10) NOT NULL,
     `ip` VARCHAR(45) NOT NULL,
+    `event_type` VARCHAR(100) DEFAULT NULL,
     `payload` TEXT,
     `status_resposta` INT NOT NULL,
     `mensagem_resposta` VARCHAR(255),

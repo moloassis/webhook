@@ -3,6 +3,9 @@
  * Configuração de conexão com o banco de dados MySQL para a VPS Hostinger.
  */
 
+// Define o fuso horário oficial para o Brasil (Brasília)
+date_default_timezone_set('America/Sao_Paulo');
+
 // Host do banco de dados (geralmente 'localhost' ou '127.0.0.1' em VPS local)
 define('DB_HOST', 'helena-crm_helenacrm-db');
 
