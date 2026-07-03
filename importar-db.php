@@ -66,6 +66,13 @@ try {
         echo "<p class='success'>✔ Coluna 'mensagem' adicionada com sucesso à tabela chamados!</p>";
     }
 
+    // Verificar e Adicionar coluna 'session_id'
+    $checarSessionId = $db->query("SHOW COLUMNS FROM `chamados` LIKE 'session_id'")->fetchAll();
+    if (empty($checarSessionId)) {
+        $db->exec("ALTER TABLE `chamados` ADD COLUMN `session_id` VARCHAR(255) DEFAULT NULL AFTER `mensagem`");
+        echo "<p class='success'>✔ Coluna 'session_id' adicionada com sucesso à tabela chamados!</p>";
+    }
+
     // Tenta criar os índices da tabela chamados (ignora caso já existam)
     try {
         $db->exec("CREATE INDEX idx_chamados_status ON `chamados` (`status`)");

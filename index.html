@@ -595,6 +595,24 @@
             box-shadow: 0 0 10px rgba(46, 213, 115, 0.3);
         }
 
+        .btn-open-chat {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%) !important;
+            color: #fff !important;
+            border: none !important;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700 !important;
+            box-shadow: 0 4px 10px rgba(46, 204, 113, 0.25);
+        }
+
+        .btn-open-chat:hover {
+            background: #2ecc71 !important;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 15px rgba(46, 204, 113, 0.4);
+        }
+
         /* Estado Vazio */
         .empty-state {
             display: flex;
@@ -820,6 +838,30 @@
             font-size: 1.1rem;
             color: #a4b0be;
         }
+
+        .urgent-modal-chat-btn {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+            color: #fff;
+            text-decoration: none;
+            padding: 1rem 2.5rem;
+            border-radius: 12px;
+            font-size: 1.25rem;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            box-shadow: 0 8px 25px rgba(46, 204, 113, 0.4);
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 1rem;
+            text-transform: uppercase;
+        }
+
+        .urgent-modal-chat-btn:hover {
+            background: #2ecc71;
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(46, 204, 113, 0.6);
+        }
     </style>
 </head>
 <body>
@@ -832,6 +874,7 @@
             <div class="urgent-modal-title">ATENDIMENTO HUMANO REQUERIDO</div>
             <div class="urgent-modal-client" id="urgentModalClient">-</div>
             <div class="urgent-modal-msg" id="urgentModalMsg">-</div>
+            <a href="#" target="_blank" id="btnUrgentChat" class="urgent-modal-chat-btn">ATENDER CONVERSA 💬</a>
             <div class="urgent-modal-time" id="urgentModalTime">🕒 -</div>
         </div>
     </div>
@@ -1225,7 +1268,7 @@
             // Quando a conexão é aberta com sucesso
             source.onopen = function() {
                 statusBadge.className = 'status-badge connected';
-                statusText.textContent = 'Monitorando Realtime';
+                statusText.textContent = 'Online';
                 console.log("SSE conectado com last_id:", lastId);
             };
 
@@ -1233,7 +1276,7 @@
             // O EventSource nativo reconecta AUTOMATICAMENTE em caso de falha.
             source.onerror = function(err) {
                 statusBadge.className = 'status-badge disconnected';
-                statusText.textContent = 'Desconectado - Reconectando...';
+                statusText.textContent = 'Offline';
                 console.warn("SSE desconectado. Tentando reconectar automaticamente...", err);
             };
 
@@ -1371,6 +1414,14 @@
                 btnUrgentResolve.onclick = function() {
                     resolverChamadoUrgente(chamadoUrgente.id, btnUrgentResolve);
                 };
+
+                const btnUrgentChat = document.getElementById('btnUrgentChat');
+                if (chamadoUrgente.session_id) {
+                    btnUrgentChat.href = `https://madeinai.wts.chat/chat2/sessions/${chamadoUrgente.session_id}`;
+                    btnUrgentChat.style.display = 'inline-flex';
+                } else {
+                    btnUrgentChat.style.display = 'none';
+                }
                 
                 modalUrgente.style.display = 'flex';
             } else {
@@ -1416,6 +1467,12 @@
                     second: '2-digit'
                 });
 
+                let actionsHTML = '';
+                if (item.session_id) {
+                    actionsHTML += `<a href="https://madeinai.wts.chat/chat2/sessions/${item.session_id}" target="_blank" class="btn-action btn-open-chat">Atender 💬</a>`;
+                }
+                actionsHTML += `<button class="btn-action btn-resolve" onclick="resolverChamado(${item.id}, this)">Dispensar</button>`;
+
                 card.innerHTML = `
                     <div class="card-details">
                         <div class="card-icon">${icon}</div>
@@ -1429,7 +1486,7 @@
                         </div>
                     </div>
                     <div class="card-actions">
-                        <button class="btn-action btn-resolve" onclick="resolverChamado(${item.id}, this)">Dispensar</button>
+                        ${actionsHTML}
                     </div>
                 `;
                 alertsGrid.appendChild(card);
@@ -1496,6 +1553,7 @@
             if (event === 'CONTACT_TAG_UPDATE') {
                 payload.content = {
                     id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : 'sim-id-' + Math.random(),
+                    sessionId: 'sim-session-' + Math.floor(Math.random() * 100000), // Simula um ID de sessão para link direto
                     name: nome,
                     phonenumberFormatted: '(22) 98131-0167',
                     tags: [msg] // A tag a ser adicionada/atualizada (ex: ATENDIMENTO HUMANO)
@@ -1503,6 +1561,7 @@
             } else if (event === 'SESSION_COMPLETE') {
                 payload.content = {
                     id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : 'sim-id-' + Math.random(),
+                    sessionId: 'sim-session-' + Math.floor(Math.random() * 100000), // Simula um ID de sessão para link direto
                     status: 'COMPLETED',
                     lastMessageText: msg,
                     contactDetails: { name: nome }
@@ -1510,6 +1569,7 @@
             } else if (event === 'SESSION_NEW') {
                 payload.content = {
                     id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : 'sim-id-' + Math.random(),
+                    sessionId: 'sim-session-' + Math.floor(Math.random() * 100000), // Simula um ID de sessão para link direto
                     status: 'PENDING',
                     contactDetails: {
                         name: nome,

@@ -14,7 +14,7 @@ try {
     $db = obterConexao();
     
     // Busca apenas os chamados ainda 'pendentes' (que não foram notificados/resolvidos)
-    $sql = "SELECT id, nome_cliente, tipo, mensagem, status, criado_em FROM chamados WHERE status = 'pendente' ORDER BY id DESC LIMIT 50";
+    $sql = "SELECT id, nome_cliente, tipo, mensagem, session_id, status, criado_em FROM chamados WHERE status = 'pendente' ORDER BY id DESC LIMIT 50";
     $stmt = $db->query($sql);
     $historico = $stmt->fetchAll();
 

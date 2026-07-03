@@ -99,6 +99,7 @@ $eventType = isset($dados['eventType']) ? trim($dados['eventType']) : null;
 $nomeCliente = null;
 $tipoEvent = 'default';
 $mensagem = null;
+$sessionId = isset($dados['content']['sessionId']) ? trim($dados['content']['sessionId']) : (isset($dados['sessionId']) ? trim($dados['sessionId']) : null);
 $criarChamadoAtivo = false; // Define se vai subir alerta com som na tela do atendente
 
 if ($eventType) {
@@ -193,6 +194,7 @@ if ($eventType) {
     $nomeCliente = isset($dados['nome_cliente']) ? trim(filter_var($dados['nome_cliente'], FILTER_SANITIZE_SPECIAL_CHARS)) : null;
     $tipoEvent = isset($dados['tipo']) ? trim(filter_var($dados['tipo'], FILTER_SANITIZE_SPECIAL_CHARS)) : 'atendimento_humano';
     $mensagem = isset($dados['mensagem']) ? trim(filter_var($dados['mensagem'], FILTER_SANITIZE_SPECIAL_CHARS)) : null;
+    $sessionId = isset($dados['session_id']) ? trim(filter_var($dados['session_id'], FILTER_SANITIZE_SPECIAL_CHARS)) : null;
     
     // Se tiver dados mínimos, cria o chamado ativo na tela
     if (!empty($nomeCliente) || !empty($mensagem)) {
@@ -205,13 +207,14 @@ if ($criarChamadoAtivo) {
     try {
         $db = obterConexao();
         
-        $sql = "INSERT INTO chamados (nome_cliente, tipo, mensagem, status, criado_em) 
-                VALUES (:nome_cliente, :tipo, :mensagem, 'pendente', NOW())";
+        $sql = "INSERT INTO chamados (nome_cliente, tipo, mensagem, session_id, status, criado_em) 
+                VALUES (:nome_cliente, :tipo, :mensagem, :session_id, 'pendente', NOW())";
                 
         $stmt = $db->prepare($sql);
         $stmt->bindValue(':nome_cliente', $nomeCliente, PDO::PARAM_STR);
         $stmt->bindValue(':tipo', $tipoEvent, PDO::PARAM_STR);
         $stmt->bindValue(':mensagem', $mensagem, PDO::PARAM_STR);
+        $stmt->bindValue(':session_id', $sessionId, PDO::PARAM_STR);
         
         if ($stmt->execute()) {
             $lastId = $db->lastInsertId();
@@ -221,6 +224,7 @@ if ($criarChamadoAtivo) {
                 'nome_cliente' => $nomeCliente,
                 'tipo' => $tipoEvent,
                 'mensagem' => $mensagem,
+                'session_id' => $sessionId,
                 'status' => 'pendente'
             ];
             

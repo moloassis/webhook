@@ -68,7 +68,7 @@ while (true) {
 
     try {
         // 4. Buscar novos chamados pendentes (criados após o último transmitido)
-        $sql = "SELECT id, nome_cliente, tipo, mensagem, criado_em 
+        $sql = "SELECT id, nome_cliente, tipo, mensagem, session_id, criado_em 
                 FROM chamados 
                 WHERE status = 'pendente' AND id > :last_id 
                 ORDER BY id ASC";
