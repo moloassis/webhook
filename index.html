@@ -1530,7 +1530,7 @@
         });
 
         // 4. Lógica do Webhook Simulator
-        // Executa um disparo HTTP POST nativo para 'webhook.php' e simula o backend do HelenaCRM
+        // Executa um disparo HTTP POST nativo para 'webhook.php' e simula o backend do Made in AI
         function enviarSimulacao(e) {
             e.preventDefault();
             ativandoAudioCtx(); // Desbloqueia áudio caso o usuário clique em enviar primeiro
@@ -1543,7 +1543,7 @@
             const msg = simMsg.value || '';
             const event = simTipo.value;
 
-            // Constrói a estrutura real do JSON que o HelenaCRM enviaria
+            // Constrói a estrutura real do JSON que o Made in AI enviaria
             let payload = {
                 eventType: event,
                 date: new Date().toISOString(),

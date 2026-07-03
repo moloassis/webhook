@@ -1,6 +1,6 @@
 <?php
 /**
- * Webhook Receiver - HelenaCRM integration
+ * Webhook Receiver - Made in AI integration
  * Recebe chamados em tempo real do CRM via HTTP POST e salva no Banco de Dados.
  * Grava logs estruturados de todas as execuções (sucesso ou falha).
  */
@@ -16,21 +16,22 @@ require_once __DIR__ . '/db.php';
 /**
  * Envia a resposta HTTP, grava o log no banco de dados e encerra a execução.
  */
-function enviarRespostaELog(int $statusCode, bool $sucesso, string $mensagemResponse, $dadosExtra = null, string $dadosBrutos = '', array $dados = []) {
+function enviarRespostaELog(int $statusCode, bool $sucesso, string $mensagemResponse, $dadosExtra = null, string $dadosBrutos = '', array $dados = [])
+{
     // 1. Gravar o log da requisição na tabela `webhook_logs`
     try {
         $db = obterConexao();
         $sqlLog = "INSERT INTO webhook_logs (metodo, ip, event_type, payload, status_resposta, mensagem_resposta) 
                    VALUES (:metodo, :ip, :event_type, :payload, :status_resposta, :mensagem_resposta)";
-        
+
         $stmtLog = $db->prepare($sqlLog);
-        
+
         // Tenta obter o eventType do payload decodificado
         $eventTypeLog = isset($dados['eventType']) ? trim(filter_var($dados['eventType'], FILTER_SANITIZE_SPECIAL_CHARS)) : null;
-        
+
         // Se não tiver body bruto, usa o array de dados decodificado
         $payloadLog = !empty($dadosBrutos) ? $dadosBrutos : json_encode($dados, JSON_UNESCAPED_UNICODE);
-        
+
         $stmtLog->execute([
             ':metodo' => $_SERVER['REQUEST_METHOD'] ?? 'POST',
             ':ip' => $_SERVER['REMOTE_ADDR'] ?? 'desconhecido',
@@ -50,11 +51,11 @@ function enviarRespostaELog(int $statusCode, bool $sucesso, string $mensagemResp
         'sucesso' => $sucesso,
         'mensagem' => $mensagemResponse
     ];
-    
+
     if ($dadosExtra !== null) {
         $resposta['dados'] = $dadosExtra;
     }
-    
+
     echo json_encode($resposta, JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -87,12 +88,12 @@ $dadosLog = [
 ];
 $separador = str_repeat('=', 60) . PHP_EOL;
 file_put_contents(
-    $logPath, 
-    $separador . json_encode($dadosLog, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL . $separador . PHP_EOL, 
+    $logPath,
+    $separador . json_encode($dadosLog, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL . $separador . PHP_EOL,
     FILE_APPEND | LOCK_EX
 );
 
-// 3. Identificar o tipo de evento (HelenaCRM ou Fallback customizado)
+// 3. Identificar o tipo de evento (Made in AI ou Fallback customizado)
 $eventType = isset($dados['eventType']) ? trim($dados['eventType']) : null;
 
 // Inicializa variáveis para o chamado
@@ -103,7 +104,7 @@ $sessionId = isset($dados['content']['sessionId']) ? trim($dados['content']['ses
 $criarChamadoAtivo = false; // Define se vai subir alerta com som na tela do atendente
 
 if ($eventType) {
-    // Processamento estruturado dos payloads reais do HelenaCRM
+    // Processamento estruturado dos payloads reais do Made in AI
     switch ($eventType) {
         case 'MESSAGE_SENT':
             $tipoEvent = 'MESSAGE_SENT';
@@ -135,10 +136,11 @@ if ($eventType) {
             $tipoEvent = 'CONTACT_TAG_UPDATE';
             $nomeCliente = $dados['content']['name'] ?? 'Desconhecido';
             $tags = $dados['content']['tags'] ?? [];
-            
+
             // Converte todas as tags para minúsculo para busca segura e sem erros de caixa alta
-            $tagsMinusculas = array_map(function($t) { return mb_strtolower(trim($t)); }, $tags);
-            
+            $tagsMinusculas = array_map(function ($t) {
+                return mb_strtolower(trim($t)); }, $tags);
+
             if (in_array('atendimento humano', $tagsMinusculas)) {
                 $mensagem = "Cliente etiquetado para Atendimento Humano no CRM.";
                 $criarChamadoAtivo = true; // Dispara alerta vermelho na tela do atendente
@@ -152,7 +154,7 @@ if ($eventType) {
             $tipoEvent = 'SESSION_COMPLETE';
             $nomeCliente = $dados['content']['contactDetails']['name'] ?? 'Desconhecido';
             $lastText = $dados['content']['lastMessageText'] ?? '';
-            
+
             // Verifica se houve transferência pelo texto da última mensagem
             // Palavras-chave: "transferida", "aguarde", "humano", "suporte"
             if (preg_match('/(transferida|aguarde|humano|suporte)/i', $lastText)) {
@@ -169,7 +171,7 @@ if ($eventType) {
             $tipoEvent = $eventType; // PANEL_CARD_STEP_CHANGE ou PANEL_CARD_UPDATE
             $nomeCliente = $dados['content']['contacts'][0]['name'] ?? ($dados['content']['title'] ?? 'Lead');
             $stepTitle = $dados['content']['stepTitle'] ?? '';
-            
+
             // Verifica se a coluna de destino do card no CRM representa atendimento humano ou lead
             if (preg_match('/(humano|suporte|atendente|human)/i', $stepTitle)) {
                 $mensagem = "Lead transferido para suporte humano na coluna: \"{$stepTitle}\"";
@@ -185,7 +187,7 @@ if ($eventType) {
 
         default:
             $tipoEvent = $eventType;
-            $mensagem = "Evento HelenaCRM não mapeado: \"{$eventType}\"";
+            $mensagem = "Evento Made in AI não mapeado: \"{$eventType}\"";
             $criarChamadoAtivo = false;
             break;
     }
@@ -195,7 +197,7 @@ if ($eventType) {
     $tipoEvent = isset($dados['tipo']) ? trim(filter_var($dados['tipo'], FILTER_SANITIZE_SPECIAL_CHARS)) : 'atendimento_humano';
     $mensagem = isset($dados['mensagem']) ? trim(filter_var($dados['mensagem'], FILTER_SANITIZE_SPECIAL_CHARS)) : null;
     $sessionId = isset($dados['session_id']) ? trim(filter_var($dados['session_id'], FILTER_SANITIZE_SPECIAL_CHARS)) : null;
-    
+
     // Se tiver dados mínimos, cria o chamado ativo na tela
     if (!empty($nomeCliente) || !empty($mensagem)) {
         $criarChamadoAtivo = true;
@@ -206,19 +208,19 @@ if ($eventType) {
 if ($criarChamadoAtivo) {
     try {
         $db = obterConexao();
-        
+
         $sql = "INSERT INTO chamados (nome_cliente, tipo, mensagem, session_id, status, criado_em) 
                 VALUES (:nome_cliente, :tipo, :mensagem, :session_id, 'pendente', NOW())";
-                
+
         $stmt = $db->prepare($sql);
         $stmt->bindValue(':nome_cliente', $nomeCliente, PDO::PARAM_STR);
         $stmt->bindValue(':tipo', $tipoEvent, PDO::PARAM_STR);
         $stmt->bindValue(':mensagem', $mensagem, PDO::PARAM_STR);
         $stmt->bindValue(':session_id', $sessionId, PDO::PARAM_STR);
-        
+
         if ($stmt->execute()) {
             $lastId = $db->lastInsertId();
-            
+
             $dadosSucesso = [
                 'id' => $lastId,
                 'nome_cliente' => $nomeCliente,
@@ -227,7 +229,7 @@ if ($criarChamadoAtivo) {
                 'session_id' => $sessionId,
                 'status' => 'pendente'
             ];
-            
+
             enviarRespostaELog(201, true, "Chamado ativo registrado e enviado ao painel.", $dadosSucesso, $dadosBrutos, $dados);
         } else {
             throw new Exception("Falha ao executar a inserção do chamado ativo.");

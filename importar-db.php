@@ -13,7 +13,7 @@ echo '<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>HelenaCRM - Setup de Banco de Dados</title>
+    <title>Central de Alertas Made in AI - Setup de Banco de Dados</title>
     <style>
         body { background: #0c0a1f; color: #f1f2f6; font-family: sans-serif; padding: 3rem; text-align: center; }
         .box { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 2rem; max-width: 600px; margin: 0 auto; display: inline-block; text-align: left; }
@@ -26,12 +26,12 @@ echo '<!DOCTYPE html>
 <body>
 <div class="box">';
 
-echo "<h2>Setup do Banco de Dados - HelenaCRM</h2>";
+echo "<h2>Setup do Banco de Dados - Central de Alertas Made in AI</h2>";
 
 try {
     // 1. Conecta ao banco de dados usando as credenciais definidas
     $db = obterConexao();
-    
+
     // 2. Garante a criação da tabela base chamados se ela não existir
     $db->exec("CREATE TABLE IF NOT EXISTS `chamados` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -43,15 +43,15 @@ try {
     // 3. Verificações incrementais (Migrations)
     // Para evitar o erro 1265 (Data truncated), primeiro expandimos o ENUM para aceitar 'notificado' e 'resolvido'
     $db->exec("ALTER TABLE `chamados` MODIFY COLUMN `status` ENUM('pendente', 'notificado', 'resolvido') NOT NULL DEFAULT 'pendente'");
-    
+
     // Convertemos qualquer registro antigo que esteja como 'notificado' para o novo status 'resolvido'
     $db->exec("UPDATE `chamados` SET `status` = 'resolvido' WHERE `status` = 'notificado'");
-    
+
     // Agora que nenhum registro usa 'notificado', podemos restringir o ENUM de forma limpa para ('pendente', 'resolvido')
     $db->exec("ALTER TABLE `chamados` MODIFY COLUMN `status` ENUM('pendente', 'resolvido') NOT NULL DEFAULT 'pendente'");
-    
+
     // Se você já tiver a tabela chamados mas ela não contiver 'tipo' ou 'mensagem', nós a alteramos.
-    
+
     // Verificar e Adicionar coluna 'tipo'
     $checarTipo = $db->query("SHOW COLUMNS FROM `chamados` LIKE 'tipo'")->fetchAll();
     if (empty($checarTipo)) {
@@ -76,11 +76,13 @@ try {
     // Tenta criar os índices da tabela chamados (ignora caso já existam)
     try {
         $db->exec("CREATE INDEX idx_chamados_status ON `chamados` (`status`)");
-    } catch (PDOException $e) { /* Índice já existente, ignorar */ }
-    
+    } catch (PDOException $e) { /* Índice já existente, ignorar */
+    }
+
     try {
         $db->exec("CREATE INDEX idx_chamados_criado ON `chamados` (`criado_em`)");
-    } catch (PDOException $e) { /* Índice já existente, ignorar */ }
+    } catch (PDOException $e) { /* Índice já existente, ignorar */
+    }
 
     // 4. Garante a criação da tabela webhook_logs
     $db->exec("CREATE TABLE IF NOT EXISTS `webhook_logs` (
@@ -103,8 +105,9 @@ try {
 
     try {
         $db->exec("CREATE INDEX idx_webhook_logs_criado ON `webhook_logs` (`criado_em`)");
-    } catch (PDOException $e) { /* Índice já existente, ignorar */ }
-    
+    } catch (PDOException $e) { /* Índice já existente, ignorar */
+    }
+
     echo "<p class='success'>✔ Estrutura de banco de dados verificada e sincronizada!</p>";
     echo "<p>As tabelas <strong>chamados</strong> e <strong>webhook_logs</strong> estão prontas para uso.</p>";
     echo "<p class='warning'>⚠ ATENÇÃO: Delete o arquivo <strong>importar-db.php</strong> do seu servidor agora por motivos de segurança.</p>";

@@ -45,16 +45,17 @@ foreach ($logs as $log) {
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HelenaCRM - Histórico Geral de Webhooks</title>
-    
+    <title>Central de Alertas - Made in AI - Histórico Geral de Webhooks</title>
+
     <!-- Fonte Outfit -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
+
     <style>
         :root {
             --bg-gradient: radial-gradient(circle at top, #140f2d 0%, #08080c 100%);
@@ -62,7 +63,7 @@ foreach ($logs as $log) {
             --border-color: rgba(255, 255, 255, 0.07);
             --text-primary: #f1f2f6;
             --text-secondary: #a4b0be;
-            
+
             --success-color: #2ed573;
             --warning-color: #ffa502;
             --error-color: #ff4757;
@@ -287,20 +288,23 @@ foreach ($logs as $log) {
         }
     </style>
 </head>
+
 <body>
 
     <div class="container">
-        
+
         <!-- Header -->
         <header>
             <div>
                 <h1>Inspetor de Webhooks Recebidos</h1>
-                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;">Monitoramento e auditoria em tempo real das conexões externas</p>
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;">Monitoramento e auditoria
+                    em tempo real das conexões externas</p>
             </div>
             <div class="header-actions">
                 <a href="index.html" class="btn btn-secondary">🖥️ Voltar ao Painel</a>
-                
-                <form action="logs.php" method="POST" onsubmit="return confirm('Tem certeza que deseja apagar todos os logs de webhooks salvos?')">
+
+                <form action="logs.php" method="POST"
+                    onsubmit="return confirm('Tem certeza que deseja apagar todos os logs de webhooks salvos?')">
                     <input type="hidden" name="action" value="clear">
                     <button type="submit" class="btn btn-danger">🗑️ Limpar Histórico</button>
                 </form>
@@ -309,12 +313,14 @@ foreach ($logs as $log) {
 
         <!-- Exibição de Erros se houver -->
         <?php if (isset($erroLimpar)): ?>
-            <div style="background: rgba(255,71,87,0.15); border: 1px solid var(--error-color); padding: 1rem; border-radius: 8px; color: var(--error-color); font-size: 0.9rem;">
+            <div
+                style="background: rgba(255,71,87,0.15); border: 1px solid var(--error-color); padding: 1rem; border-radius: 8px; color: var(--error-color); font-size: 0.9rem;">
                 <?= htmlspecialchars($erroLimpar) ?>
             </div>
         <?php endif; ?>
         <?php if (isset($erroListar)): ?>
-            <div style="background: rgba(255,71,87,0.15); border: 1px solid var(--error-color); padding: 1rem; border-radius: 8px; color: var(--error-color); font-size: 0.9rem;">
+            <div
+                style="background: rgba(255,71,87,0.15); border: 1px solid var(--error-color); padding: 1rem; border-radius: 8px; color: var(--error-color); font-size: 0.9rem;">
                 <?= htmlspecialchars($erroListar) ?>
             </div>
         <?php endif; ?>
@@ -357,36 +363,41 @@ foreach ($logs as $log) {
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($logs as $log): 
-                                $status = (int)$log['status_resposta'];
+                            <?php foreach ($logs as $log):
+                                $status = (int) $log['status_resposta'];
                                 $badgeClass = 'badge-success';
                                 if ($status >= 400 && $status < 500) {
                                     $badgeClass = 'badge-warning';
                                 } elseif ($status >= 500 || $status === 405) {
                                     $badgeClass = 'badge-error';
                                 }
-                                
+
                                 // Formata data
                                 $dataLog = date('d/m/Y H:i:s', strtotime($log['criado_em']));
-                            ?>
+                                ?>
                                 <tr class="log-row">
                                     <td style="color: var(--text-secondary);"><?= $dataLog ?></td>
-                                    <td style="font-family: monospace; font-size: 0.85rem;"><?= htmlspecialchars($log['ip']) ?></td>
+                                    <td style="font-family: monospace; font-size: 0.85rem;"><?= htmlspecialchars($log['ip']) ?>
+                                    </td>
                                     <td style="font-family: monospace; font-size: 0.85rem; font-weight: 600; color: #ffb830;">
                                         <?= htmlspecialchars($log['event_type'] ?: 'Manual/Fallback') ?>
                                     </td>
-                                    <td style="font-weight: 700; color: var(--success-color);"><?= htmlspecialchars($log['metodo']) ?></td>
+                                    <td style="font-weight: 700; color: var(--success-color);">
+                                        <?= htmlspecialchars($log['metodo']) ?></td>
                                     <td>
                                         <span class="badge <?= $badgeClass ?>"><?= $status ?></span>
                                     </td>
                                     <td style="font-weight: 500;"><?= htmlspecialchars($log['mensagem_resposta']) ?></td>
                                     <td style="text-align: center;">
-                                        <button class="btn-inspect" onclick="togglePayload(<?= $log['id'] ?>)">Ver Dados</button>
+                                        <button class="btn-inspect" onclick="togglePayload(<?= $log['id'] ?>)">Ver
+                                            Dados</button>
                                     </td>
                                 </tr>
                                 <tr>
                                     <td colspan="7" style="padding: 0; border: none;">
-                                        <div id="payload-<?= $log['id'] ?>" class="payload-container"><?= htmlspecialchars(json_encode(json_decode($log['payload']), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) ?: $log['payload']) ?></div>
+                                        <div id="payload-<?= $log['id'] ?>" class="payload-container">
+                                            <?= htmlspecialchars(json_encode(json_decode($log['payload']), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) ?: $log['payload']) ?>
+                                        </div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -414,4 +425,5 @@ foreach ($logs as $log) {
         }
     </script>
 </body>
+
 </html>
