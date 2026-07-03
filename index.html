@@ -697,9 +697,144 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* Modal Urgente em Tela Cheia */
+        .urgent-modal {
+            display: none; /* Escondido por padrão */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(8, 5, 20, 0.96);
+            backdrop-filter: blur(20px);
+            z-index: 9999;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            padding: 2rem;
+            animation: pulse-red-bg 4s infinite alternate;
+        }
+
+        @keyframes pulse-red-bg {
+            0% {
+                box-shadow: inset 0 0 100px rgba(255, 71, 87, 0.2);
+            }
+            100% {
+                box-shadow: inset 0 0 200px rgba(255, 71, 87, 0.6);
+            }
+        }
+
+        .urgent-modal-close {
+            position: absolute;
+            top: 2rem;
+            right: 2rem;
+            background: #ff4757;
+            color: #fff;
+            border: none;
+            padding: 0.8rem 1.8rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .urgent-modal-close:hover {
+            background: #ff6b81;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 71, 87, 0.6);
+        }
+
+        .urgent-modal-content {
+            text-align: center;
+            max-width: 900px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.8rem;
+            animation: float-scale 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes float-scale {
+            0% {
+                opacity: 0;
+                transform: scale(0.7);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .urgent-modal-icon {
+            font-size: 8rem;
+            animation: rotate-siren 1.5s infinite linear;
+            filter: drop-shadow(0 0 35px rgba(255, 71, 87, 0.8));
+        }
+
+        @keyframes rotate-siren {
+            0% { transform: rotate(0deg) scale(1); }
+            50% { transform: scale(1.15); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+
+        .urgent-modal-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #ff4757;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            animation: blink-text 1.2s infinite;
+        }
+
+        @keyframes blink-text {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .urgent-modal-client {
+            font-size: 4rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff 0%, #ff6b81 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 10px 30px rgba(0,0,0,0.6);
+            margin-top: -0.5rem;
+        }
+
+        .urgent-modal-msg {
+            font-size: 2rem;
+            color: #eccc68;
+            font-weight: 400;
+            line-height: 1.5;
+            max-width: 800px;
+        }
+
+        .urgent-modal-time {
+            font-size: 1.1rem;
+            color: #a4b0be;
+        }
     </style>
 </head>
 <body>
+
+    <!-- Modal Urgente em Tela Cheia -->
+    <div id="urgentAlertModal" class="urgent-modal">
+        <button id="btnUrgentResolve" class="urgent-modal-close">Resolver &times;</button>
+        <div class="urgent-modal-content">
+            <div class="urgent-modal-icon">🚨</div>
+            <div class="urgent-modal-title">ATENDIMENTO HUMANO REQUERIDO</div>
+            <div class="urgent-modal-client" id="urgentModalClient">-</div>
+            <div class="urgent-modal-msg" id="urgentModalMsg">-</div>
+            <div class="urgent-modal-time" id="urgentModalTime">🕒 -</div>
+        </div>
+    </div>
 
     <!-- Header / Navbar -->
     <header>
@@ -1144,8 +1279,70 @@
             });
         }
 
+        // Envia requisição para resolver o chamado urgente em tela cheia
+        function resolverChamadoUrgente(id, btnElement) {
+            btnElement.disabled = true;
+            btnElement.textContent = 'Resolvendo...';
+
+            fetch('resolver.php?id=' + id, {
+                method: 'POST'
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('Status HTTP ' + res.status);
+                return res.json();
+            })
+            .then(data => {
+                if (data.sucesso) {
+                    // Remove do array local
+                    chamadosList = chamadosList.filter(item => item.id !== id);
+                    
+                    // Atualiza a tela (vai fechar o modal ou passar para o próximo se houver)
+                    renderizarAlertas();
+                    atualizarContadores();
+                } else {
+                    alert('Erro ao resolver chamado: ' + data.mensagem);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Falha na comunicação com o servidor ao tentar resolver o chamado.');
+            })
+            .finally(() => {
+                btnElement.disabled = false;
+                btnElement.textContent = 'Resolver \u2715';
+            });
+        }
+
         // Renderiza o grid de alertas baseando-se no filtro ativo
         function renderizarAlertas() {
+            // Verifica se existe algum chamado de Atendimento Humano (Urgente) para exibir em Fullscreen
+            const chamadoUrgente = chamadosList.find(c => {
+                const estilo = obterEstiloEvento(c);
+                return estilo.classe === 'type-atendimento_humano';
+            });
+
+            const modalUrgente = document.getElementById('urgentAlertModal');
+            if (chamadoUrgente) {
+                document.getElementById('urgentModalClient').textContent = chamadoUrgente.nome_cliente || 'Desconhecido';
+                document.getElementById('urgentModalMsg').textContent = chamadoUrgente.mensagem || 'Requer suporte humano.';
+                
+                const horaFormatada = new Date(chamadoUrgente.criado_em.replace(/-/g, "/")).toLocaleTimeString('pt-BR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                document.getElementById('urgentModalTime').textContent = '\u23F3 Recebido \u00e0s ' + horaFormatada;
+                
+                const btnUrgentResolve = document.getElementById('btnUrgentResolve');
+                btnUrgentResolve.onclick = function() {
+                    resolverChamadoUrgente(chamadoUrgente.id, btnUrgentResolve);
+                };
+                
+                modalUrgente.style.display = 'flex';
+            } else {
+                modalUrgente.style.display = 'none';
+            }
+
             // Filtrar itens baseando-se no estilo resolvido
             const itensFiltrados = chamadosList.filter(item => {
                 if (filterActive === 'todos') return true;
