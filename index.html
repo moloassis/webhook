@@ -1047,14 +1047,17 @@
 
         // 2. Conectar com o SSE-STREAM (EventSource)
         function iniciarConexaoSSE() {
-            // Instancia o EventSource nativo apontando para o endpoint PHP
-            const source = new EventSource('sse-stream.php');
+            // Obtém o maior ID atual na lista local para sincronizar o cursor do stream
+            const lastId = chamadosList.length > 0 ? Math.max(...chamadosList.map(c => c.id)) : 0;
+
+            // Instancia o EventSource nativo apontando para o endpoint PHP passando last_id
+            const source = new EventSource('sse-stream.php?last_id=' + lastId);
 
             // Quando a conexão é aberta com sucesso
             source.onopen = function() {
                 statusBadge.className = 'status-badge connected';
                 statusText.textContent = 'Monitorando Realtime';
-                console.log("SSE conectado!");
+                console.log("SSE conectado com last_id:", lastId);
             };
 
             // Quando ocorrem erros de conexão (ex: timeout da VPS, reinicializações de rede)
@@ -1105,16 +1108,40 @@
             atualizarContadores();
         }
 
-        // Remove o card visualmente com animação e remove da lista local
+        // Envia requisição para resolver o chamado no banco e remove o card da tela
         function resolverChamado(id, btnElement) {
-            const card = btnElement.closest('.alert-card');
-            card.style.animation = 'fade-out 0.3s forwards';
-            
-            setTimeout(() => {
-                chamadosList = chamadosList.filter(item => item.id !== id);
-                renderizarAlertas();
-                atualizarContadores();
-            }, 300);
+            btnElement.disabled = true;
+            btnElement.textContent = 'Resolvendo...';
+
+            fetch('resolver.php?id=' + id, {
+                method: 'POST'
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('Status HTTP ' + res.status);
+                return res.json();
+            })
+            .then(data => {
+                if (data.sucesso) {
+                    const card = btnElement.closest('.alert-card');
+                    card.style.animation = 'fade-out 0.3s forwards';
+                    
+                    setTimeout(() => {
+                        chamadosList = chamadosList.filter(item => item.id !== id);
+                        renderizarAlertas();
+                        atualizarContadores();
+                    }, 300);
+                } else {
+                    alert('Erro ao resolver chamado: ' + data.mensagem);
+                    btnElement.disabled = false;
+                    btnElement.textContent = 'Resolver';
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Falha na comunicação com o servidor ao tentar resolver o chamado.');
+                btnElement.disabled = false;
+                btnElement.textContent = 'Resolver';
+            });
         }
 
         // Renderiza o grid de alertas baseando-se no filtro ativo

@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS `chamados` (
     `nome_cliente` VARCHAR(255) DEFAULT NULL,
     `tipo` VARCHAR(100) NOT NULL DEFAULT 'atendimento_humano',
     `mensagem` TEXT DEFAULT NULL,
-    `status` ENUM('pendente', 'notificado') NOT NULL DEFAULT 'pendente',
+    `status` ENUM('pendente', 'resolvido') NOT NULL DEFAULT 'pendente',
     `criado_em` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

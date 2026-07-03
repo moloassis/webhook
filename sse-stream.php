@@ -29,6 +29,15 @@ if (ob_get_level()) {
 require_once __DIR__ . '/db.php';
 $db = obterConexao();
 
+// Captura o último ID de chamado recebido pelo frontend (evita duplicidade e perda de eventos)
+$lastId = isset($_GET['last_id']) ? (int)$_GET['last_id'] : 0;
+if ($lastId <= 0) {
+    // Se for conexão inicial limpa, monitoramos apenas eventos criados a partir de agora
+    $stmtMax = $db->query("SELECT MAX(id) AS max_id FROM chamados");
+    $rowMax = $stmtMax->fetch();
+    $lastId = $rowMax['max_id'] ? (int)$rowMax['max_id'] : 0;
+}
+
 /**
  * IMPORTANTE: Se o seu sistema usar sessões PHP (session_start), você DEVE
  * liberar o arquivo de sessão imediatamente usando 'session_write_close()'.
@@ -58,27 +67,25 @@ while (true) {
     }
 
     try {
-        // 4. Buscar chamados pendentes
-        // Selecionamos em ordem crescente para processar os chamados mais antigos primeiro
-        $sql = "SELECT id, nome_cliente, tipo, mensagem, criado_em FROM chamados WHERE status = 'pendente' ORDER BY id ASC";
-        $stmt = $db->query($sql);
-        $chamadosPendentes = $stmt->fetchAll();
+        // 4. Buscar novos chamados pendentes (criados após o último transmitido)
+        $sql = "SELECT id, nome_cliente, tipo, mensagem, criado_em 
+                FROM chamados 
+                WHERE status = 'pendente' AND id > :last_id 
+                ORDER BY id ASC";
+        $stmt = $db->prepare($sql);
+        $stmt->execute([':last_id' => $lastId]);
+        $novosChamados = $stmt->fetchAll();
 
-        if (!empty($chamadosPendentes)) {
-            // Prepara a query de atualização de status para marcar como 'notificado'
-            $sqlUpdate = "UPDATE chamados SET status = 'notificado' WHERE id = :id";
-            $stmtUpdate = $db->prepare($sqlUpdate);
-
-            foreach ($chamadosPendentes as $chamado) {
+        if (!empty($novosChamados)) {
+            foreach ($novosChamados as $chamado) {
                 // Formato padrão SSE: "data: <json>\n\n"
-                // Cada evento precisa terminar com duas quebras de linha (\n\n) para ser processado no JS
-                echo "data: " . json_encode($chamado) . "\n\n";
+                echo "data: " . json_encode($chamado, JSON_UNESCAPED_UNICODE) . "\n\n";
 
-                // Atualizar o status no banco de dados para evitar reenvio na próxima iteração
-                $stmtUpdate->execute([':id' => $chamado['id']]);
+                // Atualiza o cursor local para o ID que acabou de ser enviado
+                $lastId = (int)$chamado['id'];
             }
 
-            // Força a saída de dados acumulada dos novos chamados para o frontend imediatamente
+            // Força a saída de dados acumulada para o frontend imediatamente
             if (ob_get_length()) {
                 ob_flush();
             }

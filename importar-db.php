@@ -36,11 +36,14 @@ try {
     $db->exec("CREATE TABLE IF NOT EXISTS `chamados` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,
         `nome_cliente` VARCHAR(255) DEFAULT NULL,
-        `status` ENUM('pendente', 'notificado') NOT NULL DEFAULT 'pendente',
+        `status` ENUM('pendente', 'resolvido') NOT NULL DEFAULT 'pendente',
         `criado_em` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
     // 3. Verificações incrementais (Migrations)
+    // Garante que o ENUM de status seja ('pendente', 'resolvido')
+    $db->exec("ALTER TABLE `chamados` MODIFY COLUMN `status` ENUM('pendente', 'resolvido') NOT NULL DEFAULT 'pendente'");
+    
     // Se você já tiver a tabela chamados mas ela não contiver 'tipo' ou 'mensagem', nós a alteramos.
     
     // Verificar e Adicionar coluna 'tipo'
