@@ -1,0 +1,22 @@
+{
+  "name": "Central de Alertas Made in AI",
+  "short_name": "Alertas AI",
+  "description": "Central de Monitoramento e Alertas em Tempo Real.",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#0c0a1f",
+  "theme_color": "#0c0a1f",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "assets/img/icon_192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/img/icon_512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

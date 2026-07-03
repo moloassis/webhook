@@ -3,10 +3,10 @@
  * Script de Importação Automática de Banco de Dados.
  * Lê o arquivo schema.sql local e executa as instruções no banco de dados configurado no config.php.
  * 
- * SEGURANÇA: delete este arquivo da sua VPS após executá-lo com sucesso.
+ * SEGURANÇA: delete esta pasta do seu servidor após executá-lo com sucesso.
  */
 
-require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/../db.php';
 
 // Configura o visual da página de importação
 echo '<!DOCTYPE html>
@@ -110,11 +110,11 @@ try {
 
     echo "<p class='success'>✔ Estrutura de banco de dados verificada e sincronizada!</p>";
     echo "<p>As tabelas <strong>chamados</strong> e <strong>webhook_logs</strong> estão prontas para uso.</p>";
-    echo "<p class='warning'>⚠ ATENÇÃO: Delete o arquivo <strong>importar-db.php</strong> do seu servidor agora por motivos de segurança.</p>";
+    echo "<p class='warning'>⚠ ATENÇÃO: Delete a pasta <strong>setup/</strong> do seu servidor agora por motivos de segurança.</p>";
 } catch (Exception $e) {
     echo "<p class='error'>❌ Erro ao importar banco de dados:</p>";
     echo "<pre class='error'>" . htmlspecialchars($e->getMessage()) . "</pre>";
-    echo "<p>Verifique se as credenciais no arquivo <code>config.php</code> estão corretas e se o container do banco está ativo.</p>";
+    echo "<p>Verifique se as credenciais no arquivo <code>../config.php</code> estão corretas e se o container do banco está ativo.</p>";
 }
 
 echo '</div>

@@ -4,14 +4,14 @@
  * Exibe todos os webhooks recebidos pelo sistema (processados com sucesso ou rejeitados).
  */
 
-require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/../db.php';
 $db = obterConexao();
 
 // Ação opcional: Limpar logs se solicitado pelo administrador
 if (isset($_POST['action']) && $_POST['action'] === 'clear') {
     try {
         $db->exec("TRUNCATE TABLE webhook_logs");
-        header("Location: logs.php");
+        header("Location: ./");
         exit;
     } catch (Exception $e) {
         $erroLimpar = "Falha ao limpar logs: " . $e->getMessage();
@@ -301,9 +301,9 @@ foreach ($logs as $log) {
                     em tempo real das conexões externas</p>
             </div>
             <div class="header-actions">
-                <a href="index.html" class="btn btn-secondary">🖥️ Voltar ao Painel</a>
+                <a href="../index.html" class="btn btn-secondary">🖥️ Voltar ao Painel</a>
 
-                <form action="logs.php" method="POST"
+                <form action="index.php" method="POST"
                     onsubmit="return confirm('Tem certeza que deseja apagar todos os logs de webhooks salvos?')">
                     <input type="hidden" name="action" value="clear">
                     <button type="submit" class="btn btn-danger">🗑️ Limpar Histórico</button>
