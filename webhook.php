@@ -88,51 +88,136 @@ file_put_contents(
     FILE_APPEND | LOCK_EX
 );
 
-// 3. Extrair e sanitizar variáveis
-$nomeCliente = isset($dados['nome_cliente']) ? trim(filter_var($dados['nome_cliente'], FILTER_SANITIZE_SPECIAL_CHARS)) : null;
-$tipoEvent = isset($dados['tipo']) ? trim(filter_var($dados['tipo'], FILTER_SANITIZE_SPECIAL_CHARS)) : 'atendimento_humano';
-$mensagem = isset($dados['mensagem']) ? trim(filter_var($dados['mensagem'], FILTER_SANITIZE_SPECIAL_CHARS)) : null;
+// 3. Identificar o tipo de evento (HelenaCRM ou Fallback customizado)
+$eventType = isset($dados['eventType']) ? trim($dados['eventType']) : null;
 
-// 4. Validar dados essenciais
-if (empty($nomeCliente) && empty($mensagem)) {
-    registrarErro("Webhook recebeu dados inválidos (sem nome ou mensagem).", [
-        'payload' => $dados,
-        'ip' => $_SERVER['REMOTE_ADDR'] ?? 'desconhecido'
-    ]);
-    enviarRespostaELog(400, false, 'Dados inválidos. Envie pelo menos o "nome_cliente" ou "mensagem".', null, $dadosBrutos, $dados);
+// Inicializa variáveis para o chamado
+$nomeCliente = null;
+$tipoEvent = 'default';
+$mensagem = null;
+$criarChamadoAtivo = false; // Define se vai subir alerta com som na tela do atendente
+
+if ($eventType) {
+    // Processamento estruturado dos payloads reais do HelenaCRM
+    switch ($eventType) {
+        case 'MESSAGE_SENT':
+            $tipoEvent = 'mensagem_enviada_ia';
+            $to = $dados['content']['details']['to'] ?? '';
+            $origin = $dados['content']['origin'] ?? 'AI';
+            $text = $dados['content']['text'] ?? '';
+            $mensagem = "IA ({$origin}) enviou mensagem para {$to}: \"{$text}\"";
+            $criarChamadoAtivo = false; // Apenas informativo
+            break;
+
+        case 'MESSAGE_RECEIVED':
+            $tipoEvent = 'mensagem_recebida_cliente';
+            $from = $dados['content']['details']['from'] ?? '';
+            $text = $dados['content']['text'] ?? '';
+            $nomeCliente = $from;
+            $mensagem = "Cliente ({$from}) enviou: \"{$text}\"";
+            $criarChamadoAtivo = false; // Apenas informativo
+            break;
+
+        case 'SESSION_NEW':
+            $tipoEvent = 'novo_atendimento';
+            $nomeCliente = $dados['content']['contactDetails']['name'] ?? 'Desconhecido';
+            $phone = $dados['content']['contactDetails']['phonenumberFormatted'] ?? '';
+            $mensagem = "Nova conversa iniciada pelo WhatsApp ({$phone}).";
+            $criarChamadoAtivo = true; // Exibe alerta suave
+            break;
+
+        case 'SESSION_COMPLETE':
+            $nomeCliente = $dados['content']['contactDetails']['name'] ?? 'Desconhecido';
+            $lastText = $dados['content']['lastMessageText'] ?? '';
+            
+            // Verifica se houve transferência pelo texto da última mensagem
+            // Palavras-chave: "transferida", "aguarde", "humano", "suporte"
+            if (preg_match('/(transferida|aguarde|humano|suporte)/i', $lastText)) {
+                $tipoEvent = 'atendimento_humano';
+                $mensagem = "Chatbot finalizado para transferência humana. Última msg: \"{$lastText}\"";
+                $criarChamadoAtivo = true; // Alerta URGENTE de atendimento humano
+            } else {
+                $tipoEvent = 'atendimento_finalizado';
+                $mensagem = "Sessão do chatbot finalizada sem transferência. Última msg: \"{$lastText}\"";
+                $criarChamadoAtivo = false; // Apenas informativo
+            }
+            break;
+
+        case 'PANEL_CARD_STEP_CHANGE':
+        case 'PANEL_CARD_UPDATE':
+            $nomeCliente = $dados['content']['contacts'][0]['name'] ?? ($dados['content']['title'] ?? 'Lead');
+            $stepTitle = $dados['content']['stepTitle'] ?? '';
+            
+            // Verifica se a coluna de destino do card no CRM representa atendimento humano ou lead
+            if (preg_match('/(humano|suporte|atendente|human)/i', $stepTitle)) {
+                $tipoEvent = 'atendimento_humano';
+                $mensagem = "Lead transferido para suporte humano na coluna: \"{$stepTitle}\"";
+                $criarChamadoAtivo = true;
+            } elseif (preg_match('/(lead|ia)/i', $stepTitle)) {
+                $tipoEvent = 'novo_lead';
+                $mensagem = "Card movido para etapa de qualificação: \"{$stepTitle}\"";
+                $criarChamadoAtivo = true;
+            } else {
+                $tipoEvent = 'card_movido';
+                $mensagem = "Card movido no CRM para: \"{$stepTitle}\"";
+                $criarChamadoAtivo = false; // Apenas informativo
+            }
+            break;
+
+        default:
+            $tipoEvent = 'evento_desconhecido';
+            $mensagem = "Evento HelenaCRM não mapeado: \"{$eventType}\"";
+            $criarChamadoAtivo = false;
+            break;
+    }
+} else {
+    // FALLBACK: Mantém retrocompatibilidade com o simulador de webhook da interface ou disparos manuais
+    $nomeCliente = isset($dados['nome_cliente']) ? trim(filter_var($dados['nome_cliente'], FILTER_SANITIZE_SPECIAL_CHARS)) : null;
+    $tipoEvent = isset($dados['tipo']) ? trim(filter_var($dados['tipo'], FILTER_SANITIZE_SPECIAL_CHARS)) : 'atendimento_humano';
+    $mensagem = isset($dados['mensagem']) ? trim(filter_var($dados['mensagem'], FILTER_SANITIZE_SPECIAL_CHARS)) : null;
+    
+    // Se tiver dados mínimos, cria o chamado ativo na tela
+    if (!empty($nomeCliente) || !empty($mensagem)) {
+        $criarChamadoAtivo = true;
+    }
 }
 
-try {
-    // 5. Inserir chamado ativo com status 'pendente'
-    $db = obterConexao();
-    
-    $sql = "INSERT INTO chamados (nome_cliente, tipo, mensagem, status, criado_em) 
-            VALUES (:nome_cliente, :tipo, :mensagem, 'pendente', NOW())";
+// 4. Se o evento exigir ação/atenção imediata, salva na tabela `chamados` com status 'pendente'
+if ($criarChamadoAtivo) {
+    try {
+        $db = obterConexao();
+        
+        $sql = "INSERT INTO chamados (nome_cliente, tipo, mensagem, status, criado_em) 
+                VALUES (:nome_cliente, :tipo, :mensagem, 'pendente', NOW())";
+                
+        $stmt = $db->prepare($sql);
+        $stmt->bindValue(':nome_cliente', $nomeCliente, PDO::PARAM_STR);
+        $stmt->bindValue(':tipo', $tipoEvent, PDO::PARAM_STR);
+        $stmt->bindValue(':mensagem', $mensagem, PDO::PARAM_STR);
+        
+        if ($stmt->execute()) {
+            $lastId = $db->lastInsertId();
             
-    $stmt = $db->prepare($sql);
-    $stmt->bindValue(':nome_cliente', $nomeCliente, PDO::PARAM_STR);
-    $stmt->bindValue(':tipo', $tipoEvent, PDO::PARAM_STR);
-    $stmt->bindValue(':mensagem', $mensagem, PDO::PARAM_STR);
-    
-    if ($stmt->execute()) {
-        $lastId = $db->lastInsertId();
-        
-        $dadosSucesso = [
-            'id' => $lastId,
-            'nome_cliente' => $nomeCliente,
-            'tipo' => $tipoEvent,
-            'mensagem' => $mensagem,
-            'status' => 'pendente'
-        ];
-        
-        enviarRespostaELog(201, true, 'Chamado registrado com sucesso!', $dadosSucesso, $dadosBrutos, $dados);
-    } else {
-        throw new Exception("Falha ao executar a inserção do chamado.");
+            $dadosSucesso = [
+                'id' => $lastId,
+                'nome_cliente' => $nomeCliente,
+                'tipo' => $tipoEvent,
+                'mensagem' => $mensagem,
+                'status' => 'pendente'
+            ];
+            
+            enviarRespostaELog(201, true, "Chamado ativo registrado e enviado ao painel.", $dadosSucesso, $dadosBrutos, $dados);
+        } else {
+            throw new Exception("Falha ao executar a inserção do chamado ativo.");
+        }
+    } catch (Exception $e) {
+        registrarErro("Erro de inserção de chamado ativo: " . $e->getMessage(), [
+            'payload' => $dados,
+            'ip' => $_SERVER['REMOTE_ADDR'] ?? 'desconhecido'
+        ]);
+        enviarRespostaELog(500, false, "Erro interno do servidor ao salvar chamado ativo.", null, $dadosBrutos, $dados);
     }
-} catch (Exception $e) {
-    registrarErro("Erro de inserção no Webhook: " . $e->getMessage(), [
-        'payload' => $dados,
-        'ip' => $_SERVER['REMOTE_ADDR'] ?? 'desconhecido'
-    ]);
-    enviarRespostaELog(500, false, 'Erro interno do servidor ao salvar o chamado.', null, $dadosBrutos, $dados);
+} else {
+    // Se for apenas informativo, encerra com HTTP 200 registrando o log
+    enviarRespostaELog(200, true, "Evento processado e registrado no histórico de logs (sem chamado ativo).", null, $dadosBrutos, $dados);
 }

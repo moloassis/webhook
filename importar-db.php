@@ -32,23 +32,57 @@ try {
     // 1. Conecta ao banco de dados usando as credenciais definidas
     $db = obterConexao();
     
-    // 2. Lê o arquivo schema.sql
-    $caminhoSql = __DIR__ . '/schema.sql';
-    if (!file_exists($caminhoSql)) {
-        throw new Exception("O arquivo schema.sql não foi localizado em: " . $caminhoSql);
+    // 2. Garante a criação da tabela base chamados se ela não existir
+    $db->exec("CREATE TABLE IF NOT EXISTS `chamados` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `nome_cliente` VARCHAR(255) DEFAULT NULL,
+        `status` ENUM('pendente', 'notificado') NOT NULL DEFAULT 'pendente',
+        `criado_em` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+    // 3. Verificações incrementais (Migrations)
+    // Se você já tiver a tabela chamados mas ela não contiver 'tipo' ou 'mensagem', nós a alteramos.
+    
+    // Verificar e Adicionar coluna 'tipo'
+    $checarTipo = $db->query("SHOW COLUMNS FROM `chamados` LIKE 'tipo'")->fetchAll();
+    if (empty($checarTipo)) {
+        $db->exec("ALTER TABLE `chamados` ADD COLUMN `tipo` VARCHAR(100) NOT NULL DEFAULT 'atendimento_humano' AFTER `nome_cliente`");
+        echo "<p class='success'>✔ Coluna 'tipo' adicionada com sucesso à tabela chamados!</p>";
     }
+
+    // Verificar e Adicionar coluna 'mensagem'
+    $checarMensagem = $db->query("SHOW COLUMNS FROM `chamados` LIKE 'mensagem'")->fetchAll();
+    if (empty($checarMensagem)) {
+        $db->exec("ALTER TABLE `chamados` ADD COLUMN `mensagem` TEXT DEFAULT NULL AFTER `tipo`");
+        echo "<p class='success'>✔ Coluna 'mensagem' adicionada com sucesso à tabela chamados!</p>";
+    }
+
+    // Tenta criar os índices da tabela chamados (ignora caso já existam)
+    try {
+        $db->exec("CREATE INDEX idx_chamados_status ON `chamados` (`status`)");
+    } catch (PDOException $e) { /* Índice já existente, ignorar */ }
     
-    $sql = file_get_contents($caminhoSql);
+    try {
+        $db->exec("CREATE INDEX idx_chamados_criado ON `chamados` (`criado_em`)");
+    } catch (PDOException $e) { /* Índice já existente, ignorar */ }
+
+    // 4. Garante a criação da tabela webhook_logs e seu índice
+    $db->exec("CREATE TABLE IF NOT EXISTS `webhook_logs` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `metodo` VARCHAR(10) NOT NULL,
+        `ip` VARCHAR(45) NOT NULL,
+        `payload` TEXT,
+        `status_resposta` INT NOT NULL,
+        `mensagem_resposta` VARCHAR(255),
+        `criado_em` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+    try {
+        $db->exec("CREATE INDEX idx_webhook_logs_criado ON `webhook_logs` (`criado_em`)");
+    } catch (PDOException $e) { /* Índice já existente, ignorar */ }
     
-    // 3. Executa a query completa
-    $db->exec($sql);
-    
-    echo "<p class='success'>✔ Banco de dados importado com sucesso!</p>";
-    echo "<p>As seguintes tabelas foram configuradas no banco <code>" . htmlspecialchars(DB_NAME) . "</code>:</p>";
-    echo "<ul>
-            <li><strong>chamados</strong> (Tabela de alertas ativos)</li>
-            <li><strong>webhook_logs</strong> (Log histórico de webhooks)</li>
-          </ul>";
+    echo "<p class='success'>✔ Estrutura de banco de dados verificada e sincronizada!</p>";
+    echo "<p>As tabelas <strong>chamados</strong> e <strong>webhook_logs</strong> estão prontas para uso.</p>";
     echo "<p class='warning'>⚠ ATENÇÃO: Delete o arquivo <strong>importar-db.php</strong> do seu servidor agora por motivos de segurança.</p>";
 } catch (Exception $e) {
     echo "<p class='error'>❌ Erro ao importar banco de dados:</p>";
