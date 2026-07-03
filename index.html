@@ -914,7 +914,7 @@
         <div class="dashboard-content">
             
             <!-- Banner de Permissão de Áudio do Navegador -->
-            <div id="audioBanner" class="audio-banner">
+            <div id="audioBanner" class="audio-banner" style="display: none;">
                 <div class="audio-banner-text">
                     <strong>Atenção:</strong> O navegador bloqueia sons automáticos antes da primeira interação. Clique em ativar para permitir alertas sonoros.
                 </div>
@@ -1041,6 +1041,39 @@
             };
         }
 
+        // Proactive check to see if browser is blocking audio autoplay
+        function verificarBloqueioAudio() {
+            try {
+                const testContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                if (testContext.state === 'suspended') {
+                    // Browser is blocking audio, show the activation banner
+                    audioBanner.style.display = 'flex';
+                    
+                    // Automatically hide banner and activate audio on any page interaction
+                    const autoUnlock = () => {
+                        testContext.resume().then(() => {
+                            if (testContext.state === 'running') {
+                                audioContext = testContext;
+                                audioBanner.style.display = 'none';
+                                window.removeEventListener('click', autoUnlock);
+                                window.removeEventListener('keydown', autoUnlock);
+                            }
+                        });
+                    };
+                    window.addEventListener('click', autoUnlock, { capture: true, passive: true });
+                    window.addEventListener('keydown', autoUnlock, { capture: true, passive: true });
+                } else {
+                    // Autoplay is already allowed by user gesture history, keep banner hidden
+                    audioContext = testContext;
+                    audioBanner.style.display = 'none';
+                }
+            } catch (e) {
+                // Fallback for older browsers
+                audioBanner.style.display = 'flex';
+            }
+        }
+
         // 1. Lógica do Web Audio API (Sons Sintéticos em Fallback)
         function ativandoAudioCtx() {
             if (!audioContext) {
@@ -1052,6 +1085,7 @@
             audioBanner.style.display = 'none';
         }
 
+        // Tenta tocar notificacao.mp3. Se falhar ou der erro (não encontrado), usa sintetizador
         function ativarContextoAudio() {
             ativandoAudioCtx();
             tocarSomSintetico('default');
@@ -1565,13 +1599,16 @@
 
         // Iniciar tudo ao carregar a página
         window.addEventListener('DOMContentLoaded', () => {
-            // 1. Carrega o histórico inicial
+            // 1. Verifica proativamente se o navegador bloqueia áudio
+            verificarBloqueioAudio();
+
+            // 2. Carrega o histórico inicial
             carregarHistorico().finally(() => {
-                // 2. Conecta ao canal de eventos em tempo real (SSE)
+                // 3. Conecta ao canal de eventos em tempo real (SSE)
                 iniciarConexaoSSE();
             });
 
-            // 3. Ouvinte para recarregar manual do histórico ao clicar no botão
+            // 4. Ouvinte para recarregar manual do histórico ao clicar no botão
             document.getElementById('btnRefreshHistory').addEventListener('click', carregarHistorico);
         });
     </script>
