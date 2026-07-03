@@ -927,7 +927,10 @@
             if (audioMuted || !audioToggle.checked) return;
 
             const mp3 = new Audio('notificacao.mp3');
-            mp3.volume = volumeControl.value / 100;
+            
+            // Força volume máximo (1.0) se for atendimento humano, senão usa o controle de volume
+            let volume = (tipo === 'atendimento_humano') ? 1.0 : (volumeControl.value / 100);
+            mp3.volume = volume;
             
             mp3.play().catch(err => {
                 console.warn("Arquivo notificacao.mp3 indisponível ou bloqueado. Usando som sintético Web Audio API.");
@@ -947,35 +950,34 @@
                     return;
                 }
 
-                const volume = volumeControl.value / 100;
+                // Força volume 100% (1.0) se for chamado urgente, senão respeita o slider
+                const volume = (tipo === 'atendimento_humano') ? 1.0 : (volumeControl.value / 100);
                 
                 // Volume geral
                 const gainNode = audioContext.createGain();
-                gainNode.gain.setValueAtTime(volume * 0.15, audioContext.currentTime); // Volume atenuado para não estourar
+                const ganhoBase = (tipo === 'atendimento_humano') ? 0.35 : 0.15; // Ganho extra para chamados humanos
+                gainNode.gain.setValueAtTime(volume * ganhoBase, audioContext.currentTime);
                 gainNode.connect(audioContext.destination);
 
                 if (tipo === 'atendimento_humano') {
-                    // Som Urgente (Bitonal / Sirene dupla)
-                    const osc1 = audioContext.createOscillator();
-                    osc1.type = 'sine';
-                    osc1.frequency.setValueAtTime(880, audioContext.currentTime); // Nota La
-                    osc1.connect(gainNode);
-                    osc1.start(audioContext.currentTime);
-                    osc1.stop(audioContext.currentTime + 0.12);
-
-                    const osc2 = audioContext.createOscillator();
-                    osc2.type = 'sine';
-                    osc2.frequency.setValueAtTime(698.46, audioContext.currentTime + 0.16); // Nota Fa
-                    osc2.connect(gainNode);
-                    osc2.start(audioContext.currentTime + 0.16);
-                    osc2.stop(audioContext.currentTime + 0.32);
-                    
-                    const osc3 = audioContext.createOscillator();
-                    osc3.type = 'sine';
-                    osc3.frequency.setValueAtTime(880, audioContext.currentTime + 0.36); // Nota La
-                    osc3.connect(gainNode);
-                    osc3.start(audioContext.currentTime + 0.36);
-                    osc3.stop(audioContext.currentTime + 0.5);
+                    // Som Urgente de Volume Alto: Sirene bitonal oscilante e repetida (4 beeps)
+                    const tempos = [0, 0.2, 0.4, 0.6];
+                    tempos.forEach((t, index) => {
+                        const freq = (index % 2 === 0) ? 987.77 : 783.99; // Nota Si5 e Sol5 alternando
+                        const osc = audioContext.createOscillator();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq, audioContext.currentTime + t);
+                        
+                        const indGain = audioContext.createGain();
+                        indGain.gain.setValueAtTime(volume * 0.35, audioContext.currentTime + t);
+                        indGain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + t + 0.18);
+                        
+                        osc.connect(indGain);
+                        indGain.connect(audioContext.destination);
+                        
+                        osc.start(audioContext.currentTime + t);
+                        osc.stop(audioContext.currentTime + t + 0.2);
+                    });
 
                 } else if (tipo === 'novo_lead') {
                     // Som de Sucesso (Arpejo musical alegre de 3 notas)
