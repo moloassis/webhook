@@ -30,13 +30,13 @@ try {
     
     echo json_encode([
         'sucesso' => true, 
-        'mensagem' => 'Chamado resolvido e retirado da fila.'
+        'mensagem' => 'Chamado dispensado e retirado da fila.'
     ], JSON_UNESCAPED_UNICODE);
 } catch (Exception $e) {
-    registrarErro("Erro ao resolver chamado #{$id}: " . $e->getMessage());
+    registrarErro("Erro ao dispensar chamado #{$id}: " . $e->getMessage());
     http_response_code(500);
     echo json_encode([
         'sucesso' => false, 
-        'mensagem' => 'Erro interno ao resolver o chamado no banco.'
+        'mensagem' => 'Erro interno ao dispensar o chamado no banco.'
     ], JSON_UNESCAPED_UNICODE);
 }

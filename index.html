@@ -826,7 +826,7 @@
 
     <!-- Modal Urgente em Tela Cheia -->
     <div id="urgentAlertModal" class="urgent-modal">
-        <button id="btnUrgentResolve" class="urgent-modal-close">Resolver &times;</button>
+        <button id="btnUrgentResolve" class="urgent-modal-close">Dispensar &times;</button>
         <div class="urgent-modal-content">
             <div class="urgent-modal-icon">🚨</div>
             <div class="urgent-modal-title">ATENDIMENTO HUMANO REQUERIDO</div>
@@ -1243,10 +1243,10 @@
             atualizarContadores();
         }
 
-        // Envia requisição para resolver o chamado no banco e remove o card da tela
+        // Envia requisição para dispensar o chamado no banco e remove o card da tela
         function resolverChamado(id, btnElement) {
             btnElement.disabled = true;
-            btnElement.textContent = 'Resolvendo...';
+            btnElement.textContent = 'Dispensando...';
 
             fetch('resolver.php?id=' + id, {
                 method: 'POST'
@@ -1266,23 +1266,23 @@
                         atualizarContadores();
                     }, 300);
                 } else {
-                    alert('Erro ao resolver chamado: ' + data.mensagem);
+                    alert('Erro ao dispensar chamado: ' + data.mensagem);
                     btnElement.disabled = false;
-                    btnElement.textContent = 'Resolver';
+                    btnElement.textContent = 'Dispensar';
                 }
             })
             .catch(err => {
                 console.error(err);
-                alert('Falha na comunicação com o servidor ao tentar resolver o chamado.');
+                alert('Falha na comunicação com o servidor ao tentar dispensar o chamado.');
                 btnElement.disabled = false;
-                btnElement.textContent = 'Resolver';
+                btnElement.textContent = 'Dispensar';
             });
         }
 
-        // Envia requisição para resolver o chamado urgente em tela cheia
+        // Envia requisição para dispensar o chamado urgente em tela cheia
         function resolverChamadoUrgente(id, btnElement) {
             btnElement.disabled = true;
-            btnElement.textContent = 'Resolvendo...';
+            btnElement.textContent = 'Dispensando...';
 
             fetch('resolver.php?id=' + id, {
                 method: 'POST'
@@ -1300,16 +1300,16 @@
                     renderizarAlertas();
                     atualizarContadores();
                 } else {
-                    alert('Erro ao resolver chamado: ' + data.mensagem);
+                    alert('Erro ao dispensar chamado: ' + data.mensagem);
                 }
             })
             .catch(err => {
                 console.error(err);
-                alert('Falha na comunicação com o servidor ao tentar resolver o chamado.');
+                alert('Falha na comunicação com o servidor ao tentar dispensar o chamado.');
             })
             .finally(() => {
                 btnElement.disabled = false;
-                btnElement.textContent = 'Resolver \u2715';
+                btnElement.textContent = 'Dispensar \u2715';
             });
         }
 
@@ -1395,7 +1395,7 @@
                         </div>
                     </div>
                     <div class="card-actions">
-                        <button class="btn-action btn-resolve" onclick="resolverChamado(${item.id}, this)">Resolver</button>
+                        <button class="btn-action btn-resolve" onclick="resolverChamado(${item.id}, this)">Dispensar</button>
                     </div>
                 `;
                 alertsGrid.appendChild(card);
