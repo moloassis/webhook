@@ -105,7 +105,7 @@ if ($eventType) {
     // Processamento estruturado dos payloads reais do HelenaCRM
     switch ($eventType) {
         case 'MESSAGE_SENT':
-            $tipoEvent = 'mensagem_enviada_ia';
+            $tipoEvent = 'MESSAGE_SENT';
             $to = $dados['content']['details']['to'] ?? '';
             $origin = $dados['content']['origin'] ?? 'AI';
             $text = $dados['content']['text'] ?? '';
@@ -114,7 +114,7 @@ if ($eventType) {
             break;
 
         case 'MESSAGE_RECEIVED':
-            $tipoEvent = 'mensagem_recebida_cliente';
+            $tipoEvent = 'MESSAGE_RECEIVED';
             $from = $dados['content']['details']['from'] ?? '';
             $text = $dados['content']['text'] ?? '';
             $nomeCliente = $from;
@@ -123,7 +123,7 @@ if ($eventType) {
             break;
 
         case 'SESSION_NEW':
-            $tipoEvent = 'novo_atendimento';
+            $tipoEvent = 'SESSION_NEW';
             $nomeCliente = $dados['content']['contactDetails']['name'] ?? 'Desconhecido';
             $phone = $dados['content']['contactDetails']['phonenumberFormatted'] ?? '';
             $mensagem = "Nova conversa iniciada pelo WhatsApp ({$phone}).";
@@ -131,17 +131,16 @@ if ($eventType) {
             break;
 
         case 'SESSION_COMPLETE':
+            $tipoEvent = 'SESSION_COMPLETE';
             $nomeCliente = $dados['content']['contactDetails']['name'] ?? 'Desconhecido';
             $lastText = $dados['content']['lastMessageText'] ?? '';
             
             // Verifica se houve transferência pelo texto da última mensagem
             // Palavras-chave: "transferida", "aguarde", "humano", "suporte"
             if (preg_match('/(transferida|aguarde|humano|suporte)/i', $lastText)) {
-                $tipoEvent = 'atendimento_humano';
                 $mensagem = "Chatbot finalizado para transferência humana. Última msg: \"{$lastText}\"";
                 $criarChamadoAtivo = true; // Alerta URGENTE de atendimento humano
             } else {
-                $tipoEvent = 'atendimento_finalizado';
                 $mensagem = "Sessão do chatbot finalizada sem transferência. Última msg: \"{$lastText}\"";
                 $criarChamadoAtivo = false; // Apenas informativo
             }
@@ -149,27 +148,25 @@ if ($eventType) {
 
         case 'PANEL_CARD_STEP_CHANGE':
         case 'PANEL_CARD_UPDATE':
+            $tipoEvent = $eventType; // PANEL_CARD_STEP_CHANGE ou PANEL_CARD_UPDATE
             $nomeCliente = $dados['content']['contacts'][0]['name'] ?? ($dados['content']['title'] ?? 'Lead');
             $stepTitle = $dados['content']['stepTitle'] ?? '';
             
             // Verifica se a coluna de destino do card no CRM representa atendimento humano ou lead
             if (preg_match('/(humano|suporte|atendente|human)/i', $stepTitle)) {
-                $tipoEvent = 'atendimento_humano';
                 $mensagem = "Lead transferido para suporte humano na coluna: \"{$stepTitle}\"";
                 $criarChamadoAtivo = true;
             } elseif (preg_match('/(lead|ia)/i', $stepTitle)) {
-                $tipoEvent = 'novo_lead';
                 $mensagem = "Card movido para etapa de qualificação: \"{$stepTitle}\"";
                 $criarChamadoAtivo = true;
             } else {
-                $tipoEvent = 'card_movido';
                 $mensagem = "Card movido no CRM para: \"{$stepTitle}\"";
                 $criarChamadoAtivo = false; // Apenas informativo
             }
             break;
 
         default:
-            $tipoEvent = 'evento_desconhecido';
+            $tipoEvent = $eventType;
             $mensagem = "Evento HelenaCRM não mapeado: \"{$eventType}\"";
             $criarChamadoAtivo = false;
             break;

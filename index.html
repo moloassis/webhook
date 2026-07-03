@@ -758,10 +758,11 @@
                     <div class="form-group">
                         <label class="label-text" for="sim_tipo">Tipo do Evento</label>
                         <select id="sim_tipo" class="form-control" onchange="atualizarMensagemPadrao()">
-                            <option value="atendimento_humano">Atendimento Humano (Urgente)</option>
-                            <option value="novo_lead">Novo Lead Qualificado</option>
-                            <option value="alerta_sistema">Alerta de Sistema</option>
-                            <option value="default">Informação Geral</option>
+                            <option value="SESSION_COMPLETE">SESSION_COMPLETE (Suporte Humano)</option>
+                            <option value="SESSION_NEW">SESSION_NEW (Novo Atendimento)</option>
+                            <option value="PANEL_CARD_STEP_CHANGE">PANEL_CARD_STEP_CHANGE (Novo Lead)</option>
+                            <option value="MESSAGE_RECEIVED">MESSAGE_RECEIVED (Mensagem Cliente)</option>
+                            <option value="MESSAGE_SENT">MESSAGE_SENT (Mensagem IA)</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -836,17 +837,71 @@
         // Configuração Inicial de Mensagem de Simulação
         function atualizarMensagemPadrao() {
             const tipo = simTipo.value;
-            if (tipo === 'atendimento_humano') {
-                simMsg.value = 'Solicitou transferência do chatbot HelenaCRM para o atendente humano.';
-            } else if (tipo === 'novo_lead') {
-                simMsg.value = 'Concluiu a etapa de qualificação no bot com score alto.';
-            } else if (tipo === 'alerta_sistema') {
-                simMsg.value = 'Falha crítica na API de pagamentos (Gateway de Envio).';
+            if (tipo === 'SESSION_COMPLETE') {
+                simMsg.value = 'Sua conversa está sendo transferida. Por favor, aguarde um momento.';
+            } else if (tipo === 'SESSION_NEW') {
+                simMsg.value = 'Nova conversa iniciada pelo WhatsApp.';
+            } else if (tipo === 'PANEL_CARD_STEP_CHANGE') {
+                simMsg.value = 'Suporte Humano';
+            } else if (tipo === 'MESSAGE_RECEIVED') {
+                simMsg.value = 'boa noite';
             } else {
-                simMsg.value = 'Evento genérico recebido da integração.';
+                simMsg.value = 'Como posso ajudar você hoje?';
             }
         }
         atualizarMensagemPadrao();
+
+        // Helper para mapear o eventType bruto em estilo visual (classe, ícone, label)
+        function obterEstiloEvento(item) {
+            const tipo = item.tipo;
+            const msg = item.mensagem || '';
+            
+            // Atendimento Humano (Urgente)
+            if (tipo === 'atendimento_humano' || 
+                (tipo === 'SESSION_COMPLETE' && /(transferida|aguarde|humano|suporte)/i.test(msg)) ||
+                (/(PANEL_CARD_STEP_CHANGE|PANEL_CARD_UPDATE)/.test(tipo) && /(humano|suporte|atendente|human)/i.test(msg))) {
+                return {
+                    classe: 'type-atendimento_humano',
+                    icon: '🚨',
+                    label: 'Atendimento Humano'
+                };
+            }
+            
+            // Novo Lead (Verde)
+            if (tipo === 'novo_lead' || 
+                (/(PANEL_CARD_STEP_CHANGE|PANEL_CARD_UPDATE)/.test(tipo) && /(lead|ia|qualificação)/i.test(msg))) {
+                return {
+                    classe: 'type-novo_lead',
+                    icon: '💵',
+                    label: 'Novo Lead'
+                };
+            }
+            
+            // Novo Atendimento (Suave)
+            if (tipo === 'SESSION_NEW' || tipo === 'novo_atendimento') {
+                return {
+                    classe: 'type-default',
+                    icon: 'ℹ️',
+                    label: 'Novo Atendimento'
+                };
+            }
+
+            // Alerta do Sistema
+            if (tipo === 'alerta_sistema') {
+                return {
+                    classe: 'type-alerta_sistema',
+                    icon: '⚠️',
+                    label: 'Alerta Sistema'
+                };
+            }
+            
+            // Padrão / Outros
+            return {
+                classe: 'type-default',
+                icon: '🔔',
+                label: 'Notificação'
+            };
+        }
 
         // 1. Lógica do Web Audio API (Sons Sintéticos em Fallback)
         function ativandoAudioCtx() {
@@ -1028,8 +1083,17 @@
             // Insere no início da array local (mais recente primeiro)
             chamadosList.unshift(chamado);
             
-            // Toca a notificação correspondente
-            tocarAlertaSonoro(chamado.tipo);
+            // Toca a notificação correspondente baseando-se no estilo resolvido
+            const estilo = obterEstiloEvento(chamado);
+            if (estilo.classe === 'type-atendimento_humano') {
+                tocarAlertaSonoro('atendimento_humano');
+            } else if (estilo.classe === 'type-novo_lead') {
+                tocarAlertaSonoro('novo_lead');
+            } else if (estilo.classe === 'type-alerta_sistema') {
+                tocarAlertaSonoro('alerta_sistema');
+            } else {
+                tocarAlertaSonoro('default');
+            }
             
             // Atualiza a renderização na tela
             renderizarAlertas();
@@ -1050,10 +1114,15 @@
 
         // Renderiza o grid de alertas baseando-se no filtro ativo
         function renderizarAlertas() {
-            // Filtrar itens
+            // Filtrar itens baseando-se no estilo resolvido
             const itensFiltrados = chamadosList.filter(item => {
                 if (filterActive === 'todos') return true;
-                return item.tipo === filterActive;
+                const estilo = obterEstiloEvento(item);
+                
+                if (filterActive === 'atendimento_humano') return estilo.classe === 'type-atendimento_humano';
+                if (filterActive === 'novo_lead') return estilo.classe === 'type-novo_lead';
+                if (filterActive === 'alerta_sistema') return estilo.classe === 'type-alerta_sistema';
+                return false;
             });
 
             // Limpa o grid
@@ -1069,26 +1138,13 @@
 
             // Montar cada card dinamicamente
             itensFiltrados.forEach(item => {
+                const estilo = obterEstiloEvento(item);
                 const card = document.createElement('div');
-                card.className = `alert-card type-${item.tipo}`;
+                card.className = `alert-card ${estilo.classe}`;
                 
-                // Mapear ícones baseados no tipo de evento
-                let icon = '🔔';
-                let labelTipo = 'Notificação';
-                
-                if (item.tipo === 'atendimento_humano') {
-                    icon = '🚨';
-                    labelTipo = 'Atendimento Humano';
-                } else if (item.tipo === 'novo_lead') {
-                    icon = '💵';
-                    labelTipo = 'Novo Lead';
-                } else if (item.tipo === 'alerta_sistema') {
-                    icon = '⚠️';
-                    labelTipo = 'Alerta Sistema';
-                } else {
-                    icon = 'ℹ️';
-                    labelTipo = 'Info';
-                }
+                // Obter dados dinâmicos do estilo
+                const icon = estilo.icon;
+                const labelTipo = estilo.label;
 
                 // Formatar hora
                 const horaFormatada = new Date(item.criado_em.replace(/-/g, "/")).toLocaleTimeString('pt-BR', {
@@ -1128,8 +1184,13 @@
             };
             
             chamadosList.forEach(item => {
-                if (contadores[item.tipo] !== undefined) {
-                    contadores[item.tipo]++;
+                const estilo = obterEstiloEvento(item);
+                if (estilo.classe === 'type-atendimento_humano') {
+                    contadores.atendimento_humano++;
+                } else if (estilo.classe === 'type-novo_lead') {
+                    contadores.novo_lead++;
+                } else if (estilo.classe === 'type-alerta_sistema') {
+                    contadores.alerta_sistema++;
                 }
             });
 
@@ -1158,11 +1219,52 @@
             btn.disabled = true;
             btn.textContent = 'Enviando...';
 
-            const payload = {
-                nome_cliente: simNome.value,
-                tipo: simTipo.value,
-                mensagem: simMsg.value
+            const nome = simNome.value || 'Cliente Teste';
+            const msg = simMsg.value || '';
+            const event = simTipo.value;
+
+            // Constrói a estrutura real do JSON que o HelenaCRM enviaria
+            let payload = {
+                eventType: event,
+                date: new Date().toISOString(),
+                content: {}
             };
+
+            if (event === 'SESSION_COMPLETE') {
+                payload.content = {
+                    id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : 'sim-id-' + Math.random(),
+                    status: 'COMPLETED',
+                    lastMessageText: msg,
+                    contactDetails: { name: nome }
+                };
+            } else if (event === 'SESSION_NEW') {
+                payload.content = {
+                    id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : 'sim-id-' + Math.random(),
+                    status: 'PENDING',
+                    contactDetails: {
+                        name: nome,
+                        phonenumberFormatted: '(22) 98131-0167'
+                    }
+                };
+            } else if (event === 'PANEL_CARD_STEP_CHANGE' || event === 'PANEL_CARD_UPDATE') {
+                payload.content = {
+                    id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : 'sim-id-' + Math.random(),
+                    title: nome,
+                    stepTitle: msg, // Passa o título da coluna
+                    contacts: [{ name: nome, phonenumberFormatted: '(22) 99968-4330' }]
+                };
+            } else if (event === 'MESSAGE_RECEIVED') {
+                payload.content = {
+                    text: msg,
+                    details: { from: nome }
+                };
+            } else if (event === 'MESSAGE_SENT') {
+                payload.content = {
+                    text: msg,
+                    origin: 'AI',
+                    details: { to: nome }
+                };
+            }
 
             fetch('webhook.php', {
                 method: 'POST',
