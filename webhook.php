@@ -100,7 +100,16 @@ $eventType = isset($dados['eventType']) ? trim($dados['eventType']) : null;
 $nomeCliente = null;
 $tipoEvent = 'default';
 $mensagem = null;
-$sessionId = isset($dados['content']['sessionId']) ? trim($dados['content']['sessionId']) : (isset($dados['sessionId']) ? trim($dados['sessionId']) : null);
+$sessionId = null;
+if (isset($dados['content']['sessionId'])) {
+    $sessionId = trim($dados['content']['sessionId']);
+} elseif (isset($dados['sessionId'])) {
+    $sessionId = trim($dados['sessionId']);
+} elseif (isset($dados['content']['id'])) {
+    $sessionId = trim($dados['content']['id']);
+} elseif (isset($dados['id'])) {
+    $sessionId = trim($dados['id']);
+}
 $criarChamadoAtivo = false; // Define se vai subir alerta com som na tela do atendente
 
 if ($eventType) {
