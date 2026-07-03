@@ -860,7 +860,7 @@
             
             // Atendimento Humano (Urgente)
             if (tipo === 'atendimento_humano' || 
-                tipo === 'CONTACT_TAG_UPDATE' ||
+                (tipo === 'CONTACT_TAG_UPDATE' && msg.includes('Atendimento Humano')) ||
                 (tipo === 'SESSION_COMPLETE' && /(transferida|aguarde|humano|suporte)/i.test(msg)) ||
                 (/(PANEL_CARD_STEP_CHANGE|PANEL_CARD_UPDATE)/.test(tipo) && /(humano|suporte|atendente|human)/i.test(msg))) {
                 return {
