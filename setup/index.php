@@ -111,12 +111,20 @@ try {
     // 5. Garante a criação da tabela pwa_subscriptions
     $db->exec("CREATE TABLE IF NOT EXISTS `pwa_subscriptions` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,
-        `endpoint` VARCHAR(500) NOT NULL UNIQUE,
+        `endpoint` VARCHAR(750) NOT NULL UNIQUE,
         `keys_p256dh` VARCHAR(255) NOT NULL,
         `keys_auth` VARCHAR(255) NOT NULL,
         `criado_em` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
     echo "<p class='success'>✔ Tabela pwa_subscriptions verificada/criada!</p>";
+
+    // Garante que a coluna 'endpoint' tenha tamanho estendido se a tabela já existia
+    try {
+        $db->exec("ALTER TABLE `pwa_subscriptions` MODIFY COLUMN `endpoint` VARCHAR(750) NOT NULL");
+        echo "<p class='success'>✔ Coluna 'endpoint' garantida como VARCHAR(750) para suporte a chaves longas!</p>";
+    } catch (PDOException $e) {
+        // Ignora caso haja erro ao modificar (ex: tamanho de índice)
+    }
 
     echo "<p class='success'>✔ Estrutura de banco de dados verificada e sincronizada!</p>";
     echo "<p>As tabelas <strong>chamados</strong>, <strong>webhook_logs</strong> e <strong>pwa_subscriptions</strong> estão prontas para uso.</p>";

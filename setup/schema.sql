@@ -31,7 +31,7 @@ CREATE INDEX idx_webhook_logs_criado ON `webhook_logs` (`criado_em`);
 -- Tabela para armazenar as inscrições de Web Push do PWA dos atendentes
 CREATE TABLE IF NOT EXISTS `pwa_subscriptions` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
-    `endpoint` VARCHAR(500) NOT NULL UNIQUE,
+    `endpoint` VARCHAR(750) NOT NULL UNIQUE,
     `keys_p256dh` VARCHAR(255) NOT NULL,
     `keys_auth` VARCHAR(255) NOT NULL,
     `criado_em` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
