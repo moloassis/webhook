@@ -296,8 +296,8 @@ function enviarPushNotificacoes(?string $nomeCliente, string $tipo, ?string $men
             $mensagemPush .= "\n" . $resumoMsg;
         }
 
-        // URL de destino para abrir no chat
-        $urlRedirect = "index.html";
+        // URL de destino para abrir no chat (raiz do PWA)
+        $urlRedirect = "./";
         if (!empty($sessionId)) {
             if (strpos($sessionId, 'contact:') === 0) {
                 $contactId = str_replace('contact:', '', $sessionId);

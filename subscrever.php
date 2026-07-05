@@ -42,15 +42,18 @@ try {
     $db = obterConexao();
 
     // Tenta inserir a nova inscrição ou atualizar caso já exista (usamos INSERT IGNORE ou ON DUPLICATE KEY UPDATE)
+    // Nota: Como emulacao de prepares está desativada no db.php, não podemos repetir placeholders nomeados na mesma query.
     $sql = "INSERT INTO pwa_subscriptions (endpoint, keys_p256dh, keys_auth) 
             VALUES (:endpoint, :keys_p256dh, :keys_auth)
-            ON DUPLICATE KEY UPDATE keys_p256dh = :keys_p256dh, keys_auth = :keys_auth";
+            ON DUPLICATE KEY UPDATE keys_p256dh = :keys_p256dh_update, keys_auth = :keys_auth_update";
 
     $stmt = $db->prepare($sql);
     $stmt->execute([
         ':endpoint' => $endpoint,
         ':keys_p256dh' => $keysP256dh,
-        ':keys_auth' => $keysAuth
+        ':keys_auth' => $keysAuth,
+        ':keys_p256dh_update' => $keysP256dh,
+        ':keys_auth_update' => $keysAuth
     ]);
 
     http_response_code(200);

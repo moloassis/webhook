@@ -76,7 +76,7 @@ self.addEventListener('push', event => {
   let data = {
     titulo: 'Made in AI - Alerta',
     mensagem: 'Suporte humano requerido!',
-    url: 'index.html'
+    url: './'
   };
 
   if (event.data) {
@@ -93,7 +93,7 @@ self.addEventListener('push', event => {
     badge: 'assets/img/icon_192.png',
     vibrate: [200, 100, 200, 100, 400],
     data: {
-      url: data.url || 'index.html'
+      url: data.url || './'
     },
     actions: [
       { action: 'open', title: 'Atender Chamado 💬' },
