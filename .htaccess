@@ -1,0 +1,13 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Regra explícita para evitar conflito com a pasta física 'logs' que pode estar bloqueada
+    RewriteRule ^logs/?$ index.php?route=logs [QSA,L]
+
+    # Evita reescrever arquivos e pastas físicas que realmente existem
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+
+    # Encaminha tudo para o index.php passando a rota na query string
+    RewriteRule ^(.*)$ index.php?route=$1 [QSA,L]
+</IfModule>

@@ -23,6 +23,7 @@
 
         // Configuração Inicial de Mensagem de Simulação
         function atualizarMensagemPadrao() {
+            if (!simTipo || !simMsg) return;
             const tipo = simTipo.value;
             if (tipo === 'CONTACT_TAG_UPDATE') {
                 simMsg.value = 'ATENDIMENTO HUMANO';
@@ -267,14 +268,18 @@
         }
 
         // Listener dos controles de som
-        btnTestSound.addEventListener('click', () => {
-            ativandoAudioCtx();
-            tocarSomSintetico(simTipo.value);
-        });
+        if (btnTestSound) {
+            btnTestSound.addEventListener('click', () => {
+                ativandoAudioCtx();
+                tocarSomSintetico(simTipo ? simTipo.value : 'default');
+            });
+        }
 
-        audioToggle.addEventListener('change', () => {
-            audioMuted = !audioToggle.checked;
-        });
+        if (audioToggle) {
+            audioToggle.addEventListener('change', () => {
+                audioMuted = !audioToggle.checked;
+            });
+        }
 
         // 2. Conectar com o SSE-STREAM (EventSource)
         function iniciarConexaoSSE() {
@@ -487,6 +492,14 @@
                 modalUrgente.style.display = 'none';
             }
 
+            const alertsGrid = document.getElementById('alertsGrid');
+            const emptyState = document.getElementById('emptyState');
+            if (!alertsGrid) {
+                // Se não estiver na dashboard, apenas gerencia os sons repetitivos urgentes
+                gerenciarAlertasSonorosUrgentes();
+                return;
+            }
+
             // Filtrar itens baseando-se no estilo resolvido
             const itensFiltrados = chamadosList.filter(item => {
                 if (filterActive === 'todos') return true;
@@ -581,7 +594,10 @@
 
         // Atualizar badges numéricas das abas superiores
         function atualizarContadores() {
-            document.getElementById('count-todos').textContent = chamadosList.length;
+            const countTodos = document.getElementById('count-todos');
+            if (!countTodos) return; // Pula se não estiver na tela do dashboard
+            
+            countTodos.textContent = chamadosList.length;
             
             const contadores = {
                 atendimento_humano: 0,
@@ -991,7 +1007,10 @@
             });
 
             // 4. Ouvinte para recarregar manual do histórico ao clicar no botão
-            document.getElementById('btnRefreshHistory').addEventListener('click', carregarHistorico);
+            const btnRefreshHistory = document.getElementById('btnRefreshHistory');
+            if (btnRefreshHistory) {
+                btnRefreshHistory.addEventListener('click', carregarHistorico);
+            }
 
             // 5. Registra o Service Worker do PWA
             if ('serviceWorker' in navigator) {

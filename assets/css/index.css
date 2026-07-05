@@ -142,6 +142,9 @@
             max-width: 1400px;
             width: 100%;
             margin: 0 auto;
+        }
+
+        .main-grid {
             display: grid;
             grid-template-columns: 320px 1fr;
             gap: 2rem;
@@ -873,10 +876,12 @@
 
         /* Tablet & Telas Médias (Até 900px) */
         @media (max-width: 900px) {
-            main {
+            .main-grid {
                 grid-template-columns: 1fr;
-                padding: 1.5rem;
                 gap: 1.5rem;
+            }
+            main {
+                padding: 1.5rem;
             }
         }
 
@@ -885,6 +890,8 @@
             /* Espaçamento Geral */
             main {
                 padding: 0.75rem 0.5rem;
+            }
+            .main-grid {
                 gap: 1rem;
             }
 
