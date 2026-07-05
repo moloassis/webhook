@@ -761,6 +761,13 @@
             if (isStandalone) {
                 // Já está instalado, garante que o painel fique oculto
                 pwaInstallPanel.style.display = 'none';
+                
+                // Tenta bloquear a tela na orientação retrato (portrait) se suportado
+                if (window.screen && window.screen.orientation && window.screen.orientation.lock) {
+                    window.screen.orientation.lock('portrait').catch(err => {
+                        console.log('Bloqueio de orientação via API de tela indisponível ou recusado:', err);
+                    });
+                }
                 return;
             }
 

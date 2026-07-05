@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Made in AI - Central de Alertas em Tempo Real</title>
     
     <!-- PWA Manifest & Icons -->
@@ -42,9 +42,9 @@
             <h1>Central de Alertas Made in AI</h1>
         </div>
         
-        <div style="display: flex; align-items: center; gap: 1rem;">
+        <div class="header-actions">
             <!-- Link para ver o inspetor completo de webhooks -->
-            <a href="logs/" style="background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color); color: var(--text-primary); text-decoration: none; padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: all 0.3s;" onmouseover="this.style.borderColor='var(--color-default)'; this.style.background='rgba(30, 144, 255, 0.1)';" onmouseout="this.style.borderColor='var(--border-color)'; this.style.background='rgba(255, 255, 255, 0.05)';">
+            <a href="logs/" class="btn-view-logs" onmouseover="this.style.borderColor='var(--color-default)'; this.style.background='rgba(30, 144, 255, 0.1)';" onmouseout="this.style.borderColor='var(--border-color)'; this.style.background='rgba(255, 255, 255, 0.05)';">
                 🔍 Ver Todos os Webhooks
             </a>
             

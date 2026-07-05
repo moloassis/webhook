@@ -35,6 +35,7 @@
             display: flex;
             flex-direction: column;
             overflow-x: hidden;
+            touch-action: pan-x pan-y; /* Impede gestos de zoom (pinch-to-zoom) e double-tap zoom */
         }
 
         /* Barra de Navegação Superior */
@@ -49,6 +50,27 @@
             position: sticky;
             top: 0;
             z-index: 100;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .btn-view-logs {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s;
         }
 
         .logo-area {
@@ -696,13 +718,6 @@
             }
         }
 
-        /* Responsividade */
-        @media (max-width: 900px) {
-            main {
-                grid-template-columns: 1fr;
-            }
-        }
-
         /* Modal Urgente em Tela Cheia */
         .urgent-modal {
             display: none; /* Escondido por padrão */
@@ -848,4 +863,254 @@
             background: #2ecc71;
             transform: scale(1.05);
             box-shadow: 0 10px 30px rgba(46, 204, 113, 0.6);
+        }
+
+        /* ==========================================
+           RESPONSIVIDADE E MELHORIAS MOBILE (UX)
+           ========================================== */
+
+        /* Tablet & Telas Médias (Até 900px) */
+        @media (max-width: 900px) {
+            main {
+                grid-template-columns: 1fr;
+                padding: 1.5rem;
+                gap: 1.5rem;
+            }
+        }
+
+        /* Celulares (Até 600px) */
+        @media (max-width: 600px) {
+            /* Espaçamento Geral */
+            main {
+                padding: 0.75rem 0.5rem;
+                gap: 1rem;
+            }
+
+            /* Ajustes de Header */
+            header {
+                padding: 0.75rem 1rem;
+                flex-direction: column;
+                gap: 0.8rem;
+                align-items: stretch;
+            }
+
+            .logo-area {
+                justify-content: center;
+                gap: 0.6rem;
+            }
+
+            h1 {
+                font-size: 1.15rem;
+                text-align: center;
+            }
+
+            .header-actions {
+                justify-content: space-between;
+                width: 100%;
+                gap: 0.5rem;
+            }
+
+            .btn-view-logs {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.78rem;
+                flex: 1;
+                justify-content: center;
+                border-radius: 6px;
+            }
+
+            .status-badge {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.78rem;
+                flex: 1;
+                justify-content: center;
+                border-radius: 6px;
+            }
+
+            /* Painéis Laterais (Sidebar) */
+            .panel-box {
+                padding: 1rem;
+                border-radius: 12px;
+            }
+
+            .panel-title {
+                font-size: 1rem;
+                margin-bottom: 0.8rem;
+            }
+
+            /* Abas de Filtro com Scroll Horizontal no Mobile */
+            .filter-tabs {
+                overflow-x: auto;
+                white-space: nowrap;
+                flex-wrap: nowrap;
+                -webkit-overflow-scrolling: touch;
+                gap: 0.4rem;
+                border-bottom: 1px solid var(--border-color);
+                padding-bottom: 0.6rem;
+                scrollbar-width: none; /* Firefox */
+                width: 100%;
+            }
+
+            .filter-tabs::-webkit-scrollbar {
+                display: none; /* Chrome, Safari, Opera */
+            }
+
+            .tab {
+                padding: 0.4rem 0.8rem;
+                font-size: 0.8rem;
+                flex-shrink: 0;
+            }
+
+            .tab.active::after {
+                bottom: -0.6rem;
+            }
+
+            #btnRefreshHistory {
+                margin-left: 0.5rem;
+                padding: 0.4rem 0.8rem;
+                font-size: 0.8rem;
+                flex-shrink: 0;
+            }
+
+            /* Cards de Alertas (Layout Vertical no Mobile para ganhar espaço) */
+            .alert-card {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0.8rem;
+                padding: 1rem;
+                border-radius: 10px;
+            }
+
+            .alert-card:hover {
+                transform: none; /* Desativa hover scale no mobile para evitar oscilações */
+            }
+
+            .card-details {
+                align-items: flex-start;
+                gap: 0.8rem;
+            }
+
+            .card-icon {
+                width: 36px;
+                height: 36px;
+                font-size: 1.1rem;
+                border-radius: 8px;
+                flex-shrink: 0;
+            }
+
+            .card-header-row {
+                gap: 0.4rem;
+            }
+
+            .client-name {
+                font-size: 0.95rem;
+                width: 100%; /* Força quebra de linha para o badge no mobile */
+            }
+
+            .badge-type {
+                font-size: 0.65rem;
+                padding: 0.1rem 0.4rem;
+            }
+
+            .card-msg {
+                font-size: 0.85rem;
+                line-height: 1.4;
+            }
+
+            .card-time {
+                font-size: 0.7rem;
+            }
+
+            /* Ações dos Cards - Botões em largura total e fáceis de tocar */
+            .card-actions {
+                width: 100%;
+                display: flex;
+                gap: 0.5rem;
+                border-top: 1px solid rgba(255, 255, 255, 0.05);
+                padding-top: 0.8rem;
+            }
+
+            .btn-action {
+                flex: 1;
+                padding: 0.7rem 0.5rem; /* Altura de clique (touch target) */
+                font-size: 0.82rem;
+                border-radius: 6px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 42px; /* Garante área mínima de toque recomendada */
+            }
+
+            /* Banner de Áudio do Navegador */
+            .audio-banner {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0.8rem;
+                padding: 0.8rem;
+            }
+
+            .audio-banner-text {
+                font-size: 0.8rem;
+                text-align: center;
+            }
+
+            .audio-banner-btn {
+                width: 100%;
+                padding: 0.6rem;
+                text-align: center;
+            }
+
+            /* Modal de Alerta Urgente em Tela Cheia no Mobile */
+            .urgent-modal {
+                padding: 1.5rem 1rem;
+            }
+
+            .urgent-modal-close {
+                top: 1rem;
+                right: 1rem;
+                padding: 0.5rem 1rem;
+                font-size: 0.8rem;
+                border-radius: 6px;
+            }
+
+            .urgent-modal-content {
+                gap: 1.2rem;
+                width: 100%;
+            }
+
+            .urgent-modal-icon {
+                font-size: 4rem;
+                filter: drop-shadow(0 0 15px rgba(255, 71, 87, 0.6));
+            }
+
+            .urgent-modal-title {
+                font-size: 1.1rem;
+                letter-spacing: 1px;
+            }
+
+            .urgent-modal-client {
+                font-size: 2.2rem;
+                line-height: 1.2;
+                margin-top: 0;
+                word-break: break-word; /* Evita quebra de layout para nomes longos */
+            }
+
+            .urgent-modal-msg {
+                font-size: 1.15rem;
+                line-height: 1.4;
+                padding: 0 0.5rem;
+            }
+
+            .urgent-modal-time {
+                font-size: 0.85rem;
+            }
+
+            .urgent-modal-chat-btn {
+                width: 100%;
+                justify-content: center;
+                padding: 0.85rem 1.5rem;
+                font-size: 1.05rem;
+                border-radius: 8px;
+                margin-top: 0.5rem;
+                min-height: 48px;
+            }
         }
