@@ -156,12 +156,14 @@
 
         // Tenta tocar notificacao.mp3. Se falhar ou der erro (não encontrado), usa sintetizador
         function tocarAlertaSonoro(tipo) {
-            if (audioMuted || !audioToggle.checked) return;
+            const habilitado = audioToggle ? audioToggle.checked : !audioMuted;
+            if (!habilitado) return;
 
             const mp3 = new Audio('assets/audio/notificacao.mp3');
             
             // Força volume máximo (1.0) se for atendimento humano, senão usa o controle de volume
-            let volume = (tipo === 'atendimento_humano') ? 1.0 : (volumeControl.value / 100);
+            const valVolume = volumeControl ? volumeControl.value : 80;
+            let volume = (tipo === 'atendimento_humano') ? 1.0 : (valVolume / 100);
             mp3.volume = volume;
             
             mp3.play().catch(err => {
@@ -183,7 +185,8 @@
                 }
 
                 // Força volume 100% (1.0) se for chamado urgente, senão respeita o slider
-                const volume = (tipo === 'atendimento_humano') ? 1.0 : (volumeControl.value / 100);
+                const valVolume = volumeControl ? volumeControl.value : 80;
+                const volume = (tipo === 'atendimento_humano') ? 1.0 : (valVolume / 100);
                 
                 // Volume geral
                 const gainNode = audioContext.createGain();
