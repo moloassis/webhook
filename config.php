@@ -24,6 +24,11 @@ define('DB_PASS', 'oou4f9n98k8qug5lovhe');
 // Configurações adicionais de charset para evitar problemas de acentuação (UTF-8)
 define('DB_CHARSET', 'utf8mb4');
 
+// --- CONFIGURAÇÃO DE CHAVES VAPID PARA PWA WEB PUSH ---
+define('VAPID_PUBLIC_KEY', 'BOZa81Pmnrmb5N7i9XMDa4tgI_E_Im_6_lDH7dTjwwBn2aVm5nhk7UWxTDrmsJyZsSU96KPXhYO8GFoesloNDlw');
+define('VAPID_PRIVATE_KEY', 'UhVqVY_ySkbmE1DXrUg0IjQ8BY6gTO0KvmEt29lXSrg');
+define('VAPID_SUBJECT', 'mailto:contato@madeinai.com.br');
+
 // --- CONFIGURAÇÃO DE LOGS DE ERROS ---
 // Não exibe erros brutos no navegador (essencial para que o SSE não quebre e por segurança na VPS Hostinger)
 ini_set('display_errors', 0);

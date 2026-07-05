@@ -1,0 +1,4 @@
+[05-Jul-2026 15:17:40 America/Sao_Paulo] PHP Fatal error:  Uncaught Error: Call to undefined function obtenerConexao() in Command line code:1
+Stack trace:
+#0 {main}
+  thrown in Command line code on line 1

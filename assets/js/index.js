@@ -40,6 +40,16 @@
         }
         atualizarMensagemPadrao();
 
+        // Determina a URL correta do CRM (Sessão de Chat ou Contato direto) com base no session_id
+        function obterUrlChat(sessionId) {
+            if (!sessionId) return '';
+            if (sessionId.startsWith('contact:')) {
+                const contactId = sessionId.replace('contact:', '');
+                return `https://madeinai.wts.chat/contacts/${contactId}`;
+            }
+            return `https://madeinai.wts.chat/chat2/sessions/${sessionId}`;
+        }
+
         // Helper para mapear o eventType bruto em estilo visual (classe, ícone, label)
         function obterEstiloEvento(item) {
             const tipo = item.tipo;
@@ -399,6 +409,35 @@
             });
         }
 
+        // Dispensa o chamado de forma silenciosa e imediata ao clicar no link de redirecionamento
+        function resolverChamadoSilencioso(id, linkElement) {
+            const card = linkElement.closest('.alert-card');
+            if (card) {
+                card.style.animation = 'fade-out 0.3s forwards';
+            }
+            
+            setTimeout(() => {
+                chamadosList = chamadosList.filter(item => item.id !== id);
+                renderizarAlertas();
+                atualizarContadores();
+            }, 300);
+
+            // Dispara para o banco de dados em segundo plano
+            fetch('resolver.php?id=' + id, { method: 'POST' })
+                .catch(err => console.error("Erro ao dispensar em background:", err));
+        }
+
+        // Dispensa o chamado urgente do modal de forma silenciosa e imediata
+        function resolverChamadoUrgenteSilencioso(id) {
+            chamadosList = chamadosList.filter(item => item.id !== id);
+            renderizarAlertas();
+            atualizarContadores();
+
+            // Dispara para o banco de dados em segundo plano
+            fetch('resolver.php?id=' + id, { method: 'POST' })
+                .catch(err => console.error("Erro ao dispensar em background:", err));
+        }
+
         // Renderiza o grid de alertas baseando-se no filtro ativo
         function renderizarAlertas() {
             // Verifica se existe algum chamado de Atendimento Humano (Urgente) para exibir em Fullscreen
@@ -426,7 +465,18 @@
 
                 const btnUrgentChat = document.getElementById('btnUrgentChat');
                 if (chamadoUrgente.session_id) {
-                    btnUrgentChat.href = `https://madeinai.wts.chat/chat2/sessions/${chamadoUrgente.session_id}`;
+                    btnUrgentChat.href = obterUrlChat(chamadoUrgente.session_id);
+                    if (chamadoUrgente.session_id.startsWith('contact:')) {
+                        btnUrgentChat.textContent = 'VER CONTATO 👤';
+                    } else {
+                        btnUrgentChat.textContent = 'ATENDER CONVERSA 💬';
+                    }
+                    
+                    // Vincula ação de auto-dispensar silencioso ao clicar
+                    btnUrgentChat.onclick = function() {
+                        resolverChamadoUrgenteSilencioso(chamadoUrgente.id);
+                    };
+                    
                     btnUrgentChat.style.display = 'inline-flex';
                 } else {
                     btnUrgentChat.style.display = 'none';
@@ -478,7 +528,8 @@
 
                 let actionsHTML = '';
                 if (item.session_id) {
-                    actionsHTML += `<a href="https://madeinai.wts.chat/chat2/sessions/${item.session_id}" target="_blank" class="btn-action btn-open-chat">Atender 💬</a>`;
+                    const labelText = item.session_id.startsWith('contact:') ? 'Ver Contato 👤' : 'Atender 💬';
+                    actionsHTML += `<a href="${obterUrlChat(item.session_id)}" target="_blank" class="btn-action btn-open-chat" onclick="resolverChamadoSilencioso(${item.id}, this)">${labelText}</a>`;
                 }
                 actionsHTML += `<button class="btn-action btn-resolve" onclick="resolverChamado(${item.id}, this)">Dispensar</button>`;
 
@@ -692,6 +743,235 @@
                 });
         }
 
+        // ==========================================
+        // LÓGICA DE PROMPT DE INSTALAÇÃO DO PWA
+        // ==========================================
+        let deferredPrompt = null;
+
+        function inicializarPromptInstalacaoPWA() {
+            const pwaInstallPanel = document.getElementById('pwaInstallPanel');
+            const btnInstallPWA = document.getElementById('btnInstallPWA');
+            const iosInstallInstructions = document.getElementById('iosInstallInstructions');
+
+            if (!pwaInstallPanel) return;
+
+            // 1. Detecta se já está rodando em modo standalone (PWA instalado)
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+            if (isStandalone) {
+                // Já está instalado, garante que o painel fique oculto
+                pwaInstallPanel.style.display = 'none';
+                return;
+            }
+
+            // 2. Detecta se o dispositivo é iOS (iPhone/iPad)
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+            if (isIOS) {
+                // Safari iOS não dispara beforeinstallprompt, mas podemos mostrar instruções manuais
+                pwaInstallPanel.style.display = 'block';
+                if (btnInstallPWA) btnInstallPWA.style.display = 'none';
+                if (iosInstallInstructions) iosInstallInstructions.style.display = 'block';
+            } else {
+                // Escuta o evento de instalação do Chrome/Android/Edge
+                window.addEventListener('beforeinstallprompt', (e) => {
+                    e.preventDefault();
+                    deferredPrompt = e;
+                    pwaInstallPanel.style.display = 'block';
+                });
+
+                if (btnInstallPWA) {
+                    btnInstallPWA.addEventListener('click', () => {
+                        if (!deferredPrompt) return;
+                        deferredPrompt.prompt();
+                        deferredPrompt.userChoice.then((choiceResult) => {
+                            if (choiceResult.outcome === 'accepted') {
+                                console.log('Usuário aceitou a instalação do PWA');
+                                pwaInstallPanel.style.display = 'none';
+                            } else {
+                                console.log('Usuário recusou a instalação do PWA');
+                            }
+                            deferredPrompt = null;
+                        });
+                    });
+                }
+
+                // Oculta o painel caso o app seja instalado com sucesso fora do botão
+                window.addEventListener('appinstalled', () => {
+                    console.log('PWA instalado com sucesso!');
+                    pwaInstallPanel.style.display = 'none';
+                    deferredPrompt = null;
+                });
+            }
+        }
+
+        // ==========================================
+        // LÓGICA DE NOTIFICAÇÕES WEB PUSH PWA
+        // ==========================================
+        const VAPID_PUBLIC_KEY = 'BOZa81Pmnrmb5N7i9XMDa4tgI_E_Im_6_lDH7dTjwwBn2aVm5nhk7UWxTDrmsJyZsSU96KPXhYO8GFoesloNDlw';
+
+        // Converte a chave pública VAPID de Base64 para Uint8Array
+        function urlB64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding)
+                .replace(/\-/g, '+')
+                .replace(/_/g, '/');
+
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        }
+
+        function inicializarPushNotifications() {
+            const pushControlRow = document.getElementById('pushControlRow');
+            const btnSubscribePush = document.getElementById('btnSubscribePush');
+            const pushStatusMsg = document.getElementById('pushStatusMsg');
+
+            if (!pushControlRow || !btnSubscribePush) return;
+
+            // Verifica compatibilidade com Service Worker e PushManager
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                console.warn('Este navegador não suporta Web Push.');
+                pushStatusMsg.textContent = 'Não suportado neste navegador.';
+                return;
+            }
+
+            // Exibe a linha de controle do Push
+            pushControlRow.style.display = 'flex';
+
+            // Verifica o estado atual de inscrição
+            navigator.serviceWorker.ready.then(reg => {
+                reg.pushManager.getSubscription().then(subscription => {
+                    atualizarInterfacePush(subscription);
+                });
+            });
+
+            btnSubscribePush.addEventListener('click', () => {
+                ativandoAudioCtx(); // Desbloqueia também o áudio ao interagir
+                navigator.serviceWorker.ready.then(reg => {
+                    reg.pushManager.getSubscription().then(subscription => {
+                        if (subscription) {
+                            desinscreverUsuarioPush(subscription);
+                        } else {
+                            inscreverUsuarioPush(reg);
+                        }
+                    });
+                });
+            });
+        }
+
+        function atualizarInterfacePush(subscription) {
+            const btnSubscribePush = document.getElementById('btnSubscribePush');
+            const pushStatusMsg = document.getElementById('pushStatusMsg');
+
+            if (!btnSubscribePush || !pushStatusMsg) return;
+
+            if (subscription) {
+                btnSubscribePush.textContent = 'Desativar Notificações 🔕';
+                btnSubscribePush.style.background = 'linear-gradient(135deg, #747d8c, #2f3542)';
+                pushStatusMsg.textContent = 'Notificações ativas no celular!';
+                pushStatusMsg.style.color = '#2ed573';
+            } else {
+                btnSubscribePush.textContent = 'Ativar Notificações 🔔';
+                btnSubscribePush.style.background = 'linear-gradient(135deg, #ff4500, #ff8c00)';
+                
+                if (Notification.permission === 'denied') {
+                    pushStatusMsg.textContent = 'Permissão negada no navegador.';
+                    pushStatusMsg.style.color = '#ff4757';
+                } else {
+                    pushStatusMsg.textContent = 'Notificações push inativas.';
+                    pushStatusMsg.style.color = 'var(--text-secondary)';
+                }
+            }
+        }
+
+        function inscreverUsuarioPush(reg) {
+            const btnSubscribePush = document.getElementById('btnSubscribePush');
+            const pushStatusMsg = document.getElementById('pushStatusMsg');
+            
+            btnSubscribePush.disabled = true;
+            pushStatusMsg.textContent = 'Solicitando permissão...';
+
+            const options = {
+                userVisibleOnly: true,
+                applicationServerKey: urlB64ToUint8Array(VAPID_PUBLIC_KEY)
+            };
+
+            reg.pushManager.subscribe(options)
+                .then(subscription => {
+                    console.log('Inscrição do Push realizada:', subscription);
+                    
+                    return fetch('subscrever.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: json_serialize_subscription(subscription)
+                    })
+                    .then(res => {
+                        if (!res.ok) throw new Error('Falha HTTP ao salvar no servidor');
+                        return res.json();
+                    })
+                    .then(data => {
+                        if (data.sucesso) {
+                            atualizarInterfacePush(subscription);
+                        } else {
+                            throw new Error(data.mensagem || 'Erro do servidor');
+                        }
+                    });
+                })
+                .catch(err => {
+                    console.error('Erro ao inscrever para Push:', err);
+                    atualizarInterfacePush(null);
+                    pushStatusMsg.textContent = 'Erro ao ativar. Tente novamente.';
+                    pushStatusMsg.style.color = '#ff4757';
+                })
+                .finally(() => {
+                    btnSubscribePush.disabled = false;
+                });
+        }
+
+        function desinscreverUsuarioPush(subscription) {
+            const btnSubscribePush = document.getElementById('btnSubscribePush');
+            const pushStatusMsg = document.getElementById('pushStatusMsg');
+
+            btnSubscribePush.disabled = true;
+            pushStatusMsg.textContent = 'Desativando...';
+
+            subscription.unsubscribe()
+                .then(successful => {
+                    if (successful) {
+                        console.log('Inscrição de Push cancelada.');
+                        atualizarInterfacePush(null);
+                    } else {
+                        throw new Error('Unsubscribe falhou no navegador');
+                    }
+                })
+                .catch(err => {
+                    console.error('Erro ao cancelar inscrição:', err);
+                    pushStatusMsg.textContent = 'Falha ao desativar.';
+                    pushStatusMsg.style.color = '#ff4757';
+                })
+                .finally(() => {
+                    btnSubscribePush.disabled = false;
+                });
+        }
+
+        function json_serialize_subscription(subscription) {
+            const key = subscription.getKey ? subscription.getKey('p256dh') : null;
+            const auth = subscription.getKey ? subscription.getKey('auth') : null;
+            
+            return JSON.stringify({
+                endpoint: subscription.endpoint,
+                keys: {
+                    p256dh: key ? btoa(String.fromCharCode(...new Uint8Array(key))) : null,
+                    auth: auth ? btoa(String.fromCharCode(...new Uint8Array(auth))) : null
+                }
+            });
+        }
+
         // Iniciar tudo ao carregar a página
         window.addEventListener('DOMContentLoaded', () => {
             // 1. Verifica proativamente se o navegador bloqueia áudio
@@ -709,7 +989,12 @@
             // 5. Registra o Service Worker do PWA
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('sw.js')
-                    .then(reg => console.log('Service Worker do PWA registrado com escopo:', reg.scope))
+                    .then(reg => {
+                        console.log('Service Worker do PWA registrado com escopo:', reg.scope);
+                        // Inicializa lógicas que dependem do Service Worker
+                        inicializarPromptInstalacaoPWA();
+                        inicializarPushNotifications();
+                    })
                     .catch(err => console.error('Erro ao registrar Service Worker do PWA:', err));
             }
         });

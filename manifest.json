@@ -1,6 +1,6 @@
 {
   "name": "Central de Alertas Made in AI",
-  "short_name": "Alertas AI",
+  "short_name": "Alertas Made in AI",
   "description": "Central de Monitoramento e Alertas em Tempo Real.",
   "start_url": "index.html",
   "display": "standalone",

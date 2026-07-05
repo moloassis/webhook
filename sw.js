@@ -68,3 +68,82 @@ self.addEventListener('fetch', event => {
       })
   );
 });
+
+// ==========================================
+// RECEBIMENTO DE NOTIFICAÇÕES PUSH (PWA)
+// ==========================================
+self.addEventListener('push', event => {
+  let data = {
+    titulo: 'Made in AI - Alerta',
+    mensagem: 'Suporte humano requerido!',
+    url: 'index.html'
+  };
+
+  if (event.data) {
+    try {
+      data = event.data.json();
+    } catch (e) {
+      data.mensagem = event.data.text();
+    }
+  }
+
+  const options = {
+    body: data.mensagem,
+    icon: 'assets/img/icon_192.png',
+    badge: 'assets/img/icon_192.png',
+    vibrate: [200, 100, 200, 100, 400],
+    data: {
+      url: data.url || 'index.html'
+    },
+    actions: [
+      { action: 'open', title: 'Atender Chamado 💬' },
+      { action: 'close', title: 'Dispensar ✕' }
+    ]
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.titulo, options)
+  );
+});
+
+// ==========================================
+// EVENTO DE CLIQUE NA NOTIFICAÇÃO PUSH
+// ==========================================
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+
+  if (event.action === 'close') {
+    return;
+  }
+
+  // Resolve a URL absoluta
+  const targetUrl = new URL(event.notification.data.url, self.location.origin).href;
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then(windowClients => {
+        // Procura uma janela/aba que já esteja aberta
+        for (let i = 0; i < windowClients.length; i++) {
+          const client = windowClients[i];
+          if (client.url === targetUrl && 'focus' in client) {
+            return client.focus();
+          }
+        }
+        
+        // Se houver qualquer janela aberta do app (mesmo em outra url), navega ela
+        for (let i = 0; i < windowClients.length; i++) {
+          const client = windowClients[i];
+          if ('focus' in client && 'navigate' in client) {
+            client.navigate(targetUrl);
+            return client.focus();
+          }
+        }
+
+        // Se nenhuma janela estiver aberta, abre uma nova
+        if (clients.openWindow) {
+          return clients.openWindow(targetUrl);
+        }
+      })
+  );
+});
+

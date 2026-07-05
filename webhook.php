@@ -13,6 +13,11 @@ header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers
 // Carrega o arquivo de conexão
 require_once __DIR__ . '/db.php';
 
+// Carrega dependências do Composer (necessário para WebPush)
+if (file_exists(__DIR__ . '/vendor/autoload.php')) {
+    require_once __DIR__ . '/vendor/autoload.php';
+}
+
 /**
  * Envia a resposta HTTP, grava o log no banco de dados e encerra a execução.
  */
@@ -239,6 +244,9 @@ if ($criarChamadoAtivo) {
                 'status' => 'pendente'
             ];
 
+            // Envia notificações push em segundo plano para os atendentes inscritos
+            enviarPushNotificacoes($nomeCliente, $tipoEvent, $mensagem, $sessionId);
+
             enviarRespostaELog(201, true, "Chamado ativo registrado e enviado ao painel.", $dadosSucesso, $dadosBrutos, $dados);
         } else {
             throw new Exception("Falha ao executar a inserção do chamado ativo.");
@@ -253,4 +261,110 @@ if ($criarChamadoAtivo) {
 } else {
     // Se for apenas informativo, encerra com HTTP 200 registrando o log
     enviarRespostaELog(200, true, "Evento processado e registrado no histórico de logs (sem chamado ativo).", null, $dadosBrutos, $dados);
+}
+
+/**
+ * Envia notificações push para todos os navegadores/celulares inscritos.
+ */
+function enviarPushNotificacoes(?string $nomeCliente, string $tipo, ?string $mensagem, ?string $sessionId): void
+{
+    try {
+        $db = obterConexao();
+        $stmt = $db->query("SELECT id, endpoint, keys_p256dh, keys_auth FROM pwa_subscriptions");
+        $inscricoes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        if (empty($inscricoes)) {
+            return; // Nenhuma inscrição registrada no banco
+        }
+        
+        // Define o título e mensagem amigáveis para a notificação
+        $titulo = "🚨 Atendimento Humano Requerido";
+        $mensagemPush = "Cliente: " . ($nomeCliente ?? 'Desconhecido');
+        
+        // Formata a mensagem com base no tipo
+        if ($tipo === 'SESSION_NEW') {
+            $titulo = "ℹ️ Novo Atendimento Iniciado";
+            $mensagemPush = "Cliente: " . ($nomeCliente ?? 'Desconhecido');
+        } elseif (preg_match('/(lead|ia)/i', $mensagem)) {
+            $titulo = "💵 Novo Lead Qualificado";
+            $mensagemPush = "Lead: " . ($nomeCliente ?? 'Desconhecido');
+        }
+        
+        if (!empty($mensagem)) {
+            // Limita a exibição do payload
+            $resumoMsg = mb_strimwidth($mensagem, 0, 100, "...");
+            $mensagemPush .= "\n" . $resumoMsg;
+        }
+
+        // URL de destino para abrir no chat
+        $urlRedirect = "index.html";
+        if (!empty($sessionId)) {
+            if (strpos($sessionId, 'contact:') === 0) {
+                $contactId = str_replace('contact:', '', $sessionId);
+                $urlRedirect = "https://madeinai.wts.chat/contacts/" . $contactId;
+            } else {
+                $urlRedirect = "https://madeinai.wts.chat/chat2/sessions/" . $sessionId;
+            }
+        }
+
+        // Configuração de autenticação VAPID
+        $auth = [
+            'VAPID' => [
+                'subject' => VAPID_SUBJECT,
+                'publicKey' => VAPID_PUBLIC_KEY,
+                'privateKey' => VAPID_PRIVATE_KEY,
+            ],
+        ];
+
+        // Instancia a classe de disparo da biblioteca minishlink/web-push
+        $webPush = new \Minishlink\WebPush\WebPush($auth);
+        
+        // Adiciona à fila de disparo para cada assinatura ativa
+        foreach ($inscricoes as $ins) {
+            $webPush->queueNotification(
+                \Minishlink\WebPush\Subscription::create([
+                    'endpoint' => $ins['endpoint'],
+                    'publicKey' => $ins['keys_p256dh'],
+                    'authToken' => $ins['keys_auth'],
+                ]),
+                json_encode([
+                    'titulo' => $titulo,
+                    'mensagem' => $mensagemPush,
+                    'url' => $urlRedirect
+                ], JSON_UNESCAPED_UNICODE)
+            );
+        }
+
+        // Executa os envios em paralelo e limpa endpoints inválidos (desinstalados)
+        $idsParaRemover = [];
+        foreach ($webPush->flush() as $report) {
+            if (!$report->isSuccess()) {
+                $response = $report->getResponse();
+                $statusCode = $response ? $response->getStatusCode() : null;
+                
+                // Código 410 (Gone) ou 404 (Not Found) indica que o app foi desinstalado ou permissão revogada
+                if ($statusCode === 410 || $statusCode === 404) {
+                    $endpointUrl = $report->getRequest()->getUri()->__toString();
+                    foreach ($inscricoes as $ins) {
+                        if ($ins['endpoint'] === $endpointUrl) {
+                            $idsParaRemover[] = $ins['id'];
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Limpa inscrições inválidas do banco para evitar desperdício de requisições
+        if (!empty($idsParaRemover)) {
+            $placeholders = implode(',', array_fill(0, count($idsParaRemover), '?'));
+            $sqlDelete = "DELETE FROM pwa_subscriptions WHERE id IN ($placeholders)";
+            $stmtDel = $db->prepare($sqlDelete);
+            $stmtDel->execute($idsParaRemover);
+            registrarErro("Inscrições de Web Push inativas removidas em lote: " . implode(', ', $idsParaRemover));
+        }
+
+    } catch (Exception $e) {
+        registrarErro("Falha catastrófica ao processar Web Push: " . $e->getMessage());
+    }
 }

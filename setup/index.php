@@ -108,8 +108,18 @@ try {
     } catch (PDOException $e) { /* Índice já existente, ignorar */
     }
 
+    // 5. Garante a criação da tabela pwa_subscriptions
+    $db->exec("CREATE TABLE IF NOT EXISTS `pwa_subscriptions` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `endpoint` VARCHAR(500) NOT NULL UNIQUE,
+        `keys_p256dh` VARCHAR(255) NOT NULL,
+        `keys_auth` VARCHAR(255) NOT NULL,
+        `criado_em` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+    echo "<p class='success'>✔ Tabela pwa_subscriptions verificada/criada!</p>";
+
     echo "<p class='success'>✔ Estrutura de banco de dados verificada e sincronizada!</p>";
-    echo "<p>As tabelas <strong>chamados</strong> e <strong>webhook_logs</strong> estão prontas para uso.</p>";
+    echo "<p>As tabelas <strong>chamados</strong>, <strong>webhook_logs</strong> e <strong>pwa_subscriptions</strong> estão prontas para uso.</p>";
     echo "<p class='warning'>⚠ ATENÇÃO: Delete a pasta <strong>setup/</strong> do seu servidor agora por motivos de segurança.</p>";
 } catch (Exception $e) {
     echo "<p class='error'>❌ Erro ao importar banco de dados:</p>";

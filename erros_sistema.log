@@ -1,0 +1,1 @@
+[2026-07-05 15:18:07] ERRO: Falha na conex√£o PDO: SQLSTATE[HY000] [2002] php_network_getaddresses: getaddrinfo for helena-crm_helenacrm-db failed: Este host n„o È conhecido.  | Contexto: {"host":"helena-crm_helenacrm-db","porta":"3306","db":"helena-crm"}
