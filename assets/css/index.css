@@ -871,6 +871,96 @@
         }
 
         /* ==========================================
+           ESTILOS DA TABELA DE LOGS (views/logs.php)
+           ========================================== */
+        .logs-panel table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        .logs-panel th {
+            padding: 0.75rem 1rem;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .logs-panel td {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.9rem;
+            vertical-align: middle;
+        }
+
+        .logs-panel tr.log-row:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        /* Badges de HTTP Status em Logs */
+        .logs-panel .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        .logs-panel .badge-success {
+            background: rgba(46, 213, 115, 0.15);
+            color: var(--color-lead);
+            border: 1px solid rgba(46, 213, 115, 0.3);
+        }
+
+        .logs-panel .badge-warning {
+            background: rgba(255, 165, 2, 0.15);
+            color: var(--color-sistema);
+            border: 1px solid rgba(255, 165, 2, 0.3);
+        }
+
+        .logs-panel .badge-error {
+            background: rgba(255, 71, 87, 0.15);
+            color: var(--color-atendimento);
+            border: 1px solid rgba(255, 71, 87, 0.3);
+        }
+
+        /* Payload visualizador colapsável */
+        .logs-panel .payload-container {
+            display: none;
+            margin-top: 0.5rem;
+            margin-bottom: 0.8rem;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: monospace;
+            font-size: 0.8rem;
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: #3ae374;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .logs-panel .btn-inspect {
+            background: none;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-secondary);
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .logs-panel .btn-inspect:hover {
+            border-color: var(--text-primary);
+            color: var(--text-primary);
+        }
+
+        /* ==========================================
            RESPONSIVIDADE E MELHORIAS MOBILE (UX)
            ========================================== */
 
