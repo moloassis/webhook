@@ -26,12 +26,12 @@ require_once __DIR__ . '/../controllers/logs_controller.php';
     </div>
 
     <!-- Exibição de Erros se houver -->
-    <?php if (isset($erroLimpar)): ?>
+    <?php if (!empty($erroLimpar)): ?>
         <div style="background: rgba(255,71,87,0.15); border: 1px solid var(--error-color); padding: 1rem; border-radius: 8px; color: var(--error-color); font-size: 0.9rem;">
             <?= htmlspecialchars($erroLimpar) ?>
         </div>
     <?php endif; ?>
-    <?php if (isset($erroListar)): ?>
+    <?php if (!empty($erroListar)): ?>
         <div style="background: rgba(255,71,87,0.15); border: 1px solid var(--error-color); padding: 1rem; border-radius: 8px; color: var(--error-color); font-size: 0.9rem;">
             <?= htmlspecialchars($erroListar) ?>
         </div>
