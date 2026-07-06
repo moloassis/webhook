@@ -1,3 +1,35 @@
+<?php
+/**
+ * Cabeçalho Comum (Header) - Central de Alertas Multi-Tenant
+ * Carrega a estilização, injeta configurações dinâmicas de White-Label e define o menu.
+ */
+
+// Se o contexto do tenant estiver ativo, injeta os estilos dinâmicos do White-Label
+$tenantNome = $_SESSION['tenant_ativo_nome'] ?? 'Made in AI';
+$tenantSlug = $_SESSION['tenant_ativo_slug'] ?? '';
+$corPrimaria = $tenantConfig['cor_primaria'] ?? '#1e90ff';
+$corSecundaria = $tenantConfig['cor_secundaria'] ?? '#ffa502';
+$modoVisualizacao = $tenantConfig['modo_visualizacao'] ?? 'dark';
+$logoPath = $tenantConfig['logo_path'] ?? '';
+
+// Função auxiliar para converter Hex em RGBA para os glows das bordas/fundo
+function hex2rgba($hex, $alpha = 0.4) {
+    $hex = str_replace('#', '', $hex);
+    if (strlen($hex) == 3) {
+        $r = hexdec(substr($hex, 0, 1) . substr($hex, 0, 1));
+        $g = hexdec(substr($hex, 1, 1) . substr($hex, 1, 1));
+        $b = hexdec(substr($hex, 2, 1) . substr($hex, 2, 1));
+    } else {
+        $r = hexdec(substr($hex, 0, 2));
+        $g = hexdec(substr($hex, 2, 2));
+        $b = hexdec(substr($hex, 4, 2));
+    }
+    return "rgba($r, $g, $b, $alpha)";
+}
+
+$corPrimariaGlow = hex2rgba($corPrimaria, 0.4);
+$corSecundariaGlow = hex2rgba($corSecundaria, 0.4);
+?>
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -5,15 +37,15 @@
     <!-- Base URL dinâmica calculada pelo PHP para rotas amigáveis -->
     <base href="<?php echo $baseUrl; ?>">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Made in AI - Central de Alertas em Tempo Real</title>
+    <title><?php echo htmlspecialchars($tenantNome, ENT_QUOTES, 'UTF-8'); ?> - Central de Alertas</title>
     
-    <!-- PWA Manifest & Icons -->
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0c0a1f">
+    <!-- PWA Manifest Dinâmico com base no tenant -->
+    <link rel="manifest" href="manifest.php?slug=<?php echo urlencode($tenantSlug); ?>">
+    <meta name="theme-color" content="<?php echo ($modoVisualizacao === 'light') ? '#f5f6fa' : '#0c0a1f'; ?>">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Alertas AI">
-    <link rel="apple-touch-icon" href="assets/img/icon_192.png">
+    <meta name="apple-mobile-web-app-title" content="<?php echo htmlspecialchars($tenantNome, ENT_QUOTES, 'UTF-8'); ?>">
+    <link rel="apple-touch-icon" href="<?php echo $logoPath ?: 'assets/img/icon_192.png'; ?>">
     
     <!-- Fonte Premium Outfit da Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -22,11 +54,68 @@
     
     <link rel="stylesheet" href="assets/css/index.css">
     
+    <style>
+        :root {
+            --color-default: <?php echo $corPrimaria; ?>;
+            --color-default-glow: <?php echo $corPrimariaGlow; ?>;
+            --color-sistema: <?php echo $corSecundaria; ?>;
+            --color-sistema-glow: <?php echo $corSecundariaGlow; ?>;
+            
+            <?php if ($modoVisualizacao === 'light'): ?>
+            --bg-gradient: linear-gradient(135deg, #f5f6fa 0%, #dfe4ea 100%);
+            --panel-bg: rgba(255, 255, 255, 0.85);
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --border-color: rgba(0, 0, 0, 0.08);
+            --text-primary: #2f3542;
+            --text-secondary: #747d8c;
+            <?php endif; ?>
+        }
+
+        <?php if ($modoVisualizacao === 'light'): ?>
+        /* Sobrescreve estilos escuros nativos para White-Label Light Mode */
+        h1, .panel-title, .label-text, .metric-value, .metric-label {
+            background: none !important;
+            -webkit-text-fill-color: initial !important;
+            color: var(--text-primary) !important;
+        }
+        header {
+            background: rgba(255, 255, 255, 0.9) !important;
+        }
+        .logo-header h1 {
+            background: none !important;
+            -webkit-text-fill-color: initial !important;
+            color: var(--text-primary) !important;
+        }
+        .btn-view-logs {
+            background: rgba(0, 0, 0, 0.03) !important;
+            color: var(--text-primary) !important;
+        }
+        .btn-view-logs:hover {
+            background: rgba(0, 0, 0, 0.06) !important;
+        }
+        .card-simulador input, .card-simulador select, .card-simulador textarea {
+            background: rgba(0, 0, 0, 0.02) !important;
+            color: var(--text-primary) !important;
+            border-color: rgba(0, 0, 0, 0.1) !important;
+        }
+        .webhook-table th {
+            background: rgba(0, 0, 0, 0.02) !important;
+            color: var(--text-primary) !important;
+        }
+        .webhook-table tr:hover {
+            background: rgba(0, 0, 0, 0.01) !important;
+        }
+        <?php endif; ?>
+    </style>
+
     <!-- Configurações do Sistema injetadas do Backend -->
     <script>
         window.SYSTEM_CONFIG = {
             audioAlerta: "<?php echo htmlspecialchars(obterConfiguracao('audio_alerta', 'assets/audio/notificacao.mp3'), ENT_QUOTES, 'UTF-8'); ?>",
-            limiteLogs: <?php echo (int) obterConfiguracao('limite_logs', 100); ?>
+            limiteLogs: <?php echo (int) obterConfiguracao('limite_logs', 100); ?>,
+            jwtToken: "<?php echo $_SESSION['jwt_token'] ?? ''; ?>",
+            tenantSlug: "<?php echo htmlspecialchars($tenantSlug, ENT_QUOTES, 'UTF-8'); ?>",
+            webhookToken: "<?php echo htmlspecialchars($tenantConfig['webhook_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
         };
     </script>
 </head>
@@ -47,23 +136,32 @@
 
     <!-- Header / Navbar -->
     <header>
-        <a href="./" style="text-decoration: none; display: flex; align-items: center; gap: 0.8rem;">
+        <a href="t/<?php echo $tenantSlug; ?>/dashboard" style="text-decoration: none; display: flex; align-items: center; gap: 0.8rem;">
             <div class="logo-area">
-                <div class="logo-dot"></div>
-                <h1>Central de Alertas Made in AI</h1>
+                <?php if ($logoPath && file_exists(__DIR__ . '/../' . $logoPath)): ?>
+                    <img src="<?php echo htmlspecialchars($logoPath, ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($tenantNome, ENT_QUOTES, 'UTF-8'); ?>" style="max-height: 38px; border-radius: 6px; object-fit: contain;">
+                <?php else: ?>
+                    <div class="logo-dot"></div>
+                <?php endif; ?>
+                <h1><?php echo htmlspecialchars($tenantNome, ENT_QUOTES, 'UTF-8'); ?></h1>
             </div>
         </a>
         
         <div class="header-actions">
             <!-- Navegação Tabular de Páginas -->
-            <a href="./" class="btn-view-logs" style="<?php echo ($route === 'dashboard') ? 'background: rgba(30, 144, 255, 0.15); border-color: var(--color-default); font-weight: 600;' : ''; ?>" onmouseover="this.style.borderColor='var(--color-default)';" onmouseout="<?php echo ($route === 'dashboard') ? '' : "this.style.borderColor='var(--border-color)';"; ?>">
+            <a href="t/<?php echo $tenantSlug; ?>/dashboard" class="btn-view-logs" style="<?php echo ($currentView === 'dashboard') ? 'background: rgba(30, 144, 255, 0.15); border-color: var(--color-default); font-weight: 600;' : ''; ?>" onmouseover="this.style.borderColor='var(--color-default)';" onmouseout="<?php echo ($currentView === 'dashboard') ? '' : "this.style.borderColor='var(--border-color)';"; ?>">
                 📊 Dashboard
             </a>
-            <a href="logs" class="btn-view-logs" style="<?php echo ($route === 'logs') ? 'background: rgba(30, 144, 255, 0.15); border-color: var(--color-default); font-weight: 600;' : ''; ?>" onmouseover="this.style.borderColor='var(--color-default)';" onmouseout="<?php echo ($route === 'logs') ? '' : "this.style.borderColor='var(--border-color)';"; ?>">
+            <a href="t/<?php echo $tenantSlug; ?>/logs" class="btn-view-logs" style="<?php echo ($currentView === 'logs') ? 'background: rgba(30, 144, 255, 0.15); border-color: var(--color-default); font-weight: 600;' : ''; ?>" onmouseover="this.style.borderColor='var(--color-default)';" onmouseout="<?php echo ($currentView === 'logs') ? '' : "this.style.borderColor='var(--border-color)';"; ?>">
                 🔍 Webhooks
             </a>
-            <a href="settings" class="btn-view-logs" style="<?php echo ($route === 'settings' || $route === 'configuracoes') ? 'background: rgba(30, 144, 255, 0.15); border-color: var(--color-default); font-weight: 600;' : ''; ?>" onmouseover="this.style.borderColor='var(--color-default)';" onmouseout="<?php echo ($route === 'settings' || $route === 'configuracoes') ? '' : "this.style.borderColor='var(--border-color)';"; ?>">
+            <a href="t/<?php echo $tenantSlug; ?>/settings" class="btn-view-logs" style="<?php echo ($currentView === 'settings' || $currentView === 'configuracoes') ? 'background: rgba(30, 144, 255, 0.15); border-color: var(--color-default); font-weight: 600;' : ''; ?>" onmouseover="this.style.borderColor='var(--color-default)';" onmouseout="<?php echo ($currentView === 'settings' || $currentView === 'configuracoes') ? '' : "this.style.borderColor='var(--border-color)';"; ?>">
                 ⚙️ Configurações
+            </a>
+            
+            <!-- Botão de Sair -->
+            <a href="logout" class="btn-view-logs" style="border-color: rgba(255, 71, 87, 0.2); color: #ff4757;" onmouseover="this.style.background='rgba(255,71,87,0.1)'" onmouseout="this.style.background='none'">
+                🚪 Sair
             </a>
             
             <!-- Badge de Conexão SSE -->
@@ -75,7 +173,7 @@
     </header>
 
     <!-- Conteúdo Principal -->
-    <main class="<?php echo ($route === 'logs' || $route === 'settings' || $route === 'configuracoes') ? 'main-full' : 'main-grid'; ?>">
+    <main class="<?php echo ($currentView === 'logs' || $currentView === 'settings' || $currentView === 'configuracoes') ? 'main-full' : 'main-grid'; ?>">
         
         <!-- Banner de Permissão de Áudio do Navegador (Exibido se o autoplay estiver bloqueado) -->
         <div id="audioBanner" class="audio-banner" style="display: none; grid-column: 1 / -1; width: 100%;">

@@ -21,33 +21,46 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
 /**
  * Envia a resposta HTTP, grava o log no banco de dados e encerra a execução.
  */
-function enviarRespostaELog(int $statusCode, bool $sucesso, string $mensagemResponse, $dadosExtra = null, string $dadosBrutos = '', array $dados = [])
+function enviarRespostaELogSemEmpresa(int $statusCode, bool $sucesso, string $mensagemResponse)
+{
+    http_response_code($statusCode);
+    echo json_encode([
+        'sucesso' => $sucesso,
+        'mensagem' => $mensagemResponse
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+function enviarRespostaELog(int $statusCode, bool $sucesso, string $mensagemResponse, $dadosExtra = null, string $dadosBrutos = '', array $dados = [], ?int $empresaId = null)
 {
     // 1. Gravar o log da requisição na tabela `webhook_logs`
-    try {
-        $db = obterConexao();
-        $sqlLog = "INSERT INTO webhook_logs (metodo, ip, event_type, payload, status_resposta, mensagem_resposta) 
-                   VALUES (:metodo, :ip, :event_type, :payload, :status_resposta, :mensagem_resposta)";
+    if ($empresaId !== null) {
+        try {
+            $db = obterConexao();
+            $sqlLog = "INSERT INTO webhook_logs (empresa_id, metodo, ip, event_type, payload, status_resposta, mensagem_resposta) 
+                       VALUES (:empresa_id, :metodo, :ip, :event_type, :payload, :status_resposta, :mensagem_resposta)";
 
-        $stmtLog = $db->prepare($sqlLog);
+            $stmtLog = $db->prepare($sqlLog);
 
-        // Tenta obter o eventType do payload decodificado
-        $eventTypeLog = isset($dados['eventType']) ? trim(filter_var($dados['eventType'], FILTER_SANITIZE_SPECIAL_CHARS)) : null;
+            // Tenta obter o eventType do payload decodificado
+            $eventTypeLog = isset($dados['eventType']) ? trim(filter_var($dados['eventType'], FILTER_SANITIZE_SPECIAL_CHARS)) : null;
 
-        // Se não tiver body bruto, usa o array de dados decodificado
-        $payloadLog = !empty($dadosBrutos) ? $dadosBrutos : json_encode($dados, JSON_UNESCAPED_UNICODE);
+            // Se não tiver body bruto, usa o array de dados decodificado
+            $payloadLog = !empty($dadosBrutos) ? $dadosBrutos : json_encode($dados, JSON_UNESCAPED_UNICODE);
 
-        $stmtLog->execute([
-            ':metodo' => $_SERVER['REQUEST_METHOD'] ?? 'POST',
-            ':ip' => $_SERVER['REMOTE_ADDR'] ?? 'desconhecido',
-            ':event_type' => $eventTypeLog,
-            ':payload' => $payloadLog,
-            ':status_resposta' => $statusCode,
-            ':mensagem_resposta' => $mensagemResponse
-        ]);
-    } catch (Exception $e) {
-        // Se falhar o log no banco, registra no erro de sistema para não travar o webhook
-        registrarErro("Falha ao salvar log de webhook no banco: " . $e->getMessage());
+            $stmtLog->execute([
+                ':empresa_id' => $empresaId,
+                ':metodo' => $_SERVER['REQUEST_METHOD'] ?? 'POST',
+                ':ip' => $_SERVER['REMOTE_ADDR'] ?? 'desconhecido',
+                ':event_type' => $eventTypeLog,
+                ':payload' => $payloadLog,
+                ':status_resposta' => $statusCode,
+                ':mensagem_resposta' => $mensagemResponse
+            ]);
+        } catch (Exception $e) {
+            // Se falhar o log no banco, registra no erro de sistema para não travar o webhook
+            registrarErro("Falha ao salvar log de webhook no banco: " . $e->getMessage());
+        }
     }
 
     // 2. Responder ao cliente em formato JSON
@@ -67,7 +80,27 @@ function enviarRespostaELog(int $statusCode, bool $sucesso, string $mensagemResp
 
 // 1. Validar se o método HTTP é POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    enviarRespostaELog(405, false, 'Método não permitido. Utilize HTTP POST.');
+    enviarRespostaELogSemEmpresa(405, false, 'Método não permitido. Utilize HTTP POST.');
+}
+
+// 1.2 Validar token do webhook para isolar a empresa
+$token = isset($_GET['token']) ? trim($_GET['token']) : '';
+if (empty($token)) {
+    enviarRespostaELogSemEmpresa(401, false, 'Token do webhook não fornecido.');
+}
+
+try {
+    $db = obterConexao();
+    $stmt = $db->prepare("SELECT id FROM tenants WHERE webhook_token = :token");
+    $stmt->execute([':token' => $token]);
+    $empresaId = $stmt->fetchColumn();
+
+    if (!$empresaId) {
+        enviarRespostaELogSemEmpresa(403, false, 'Token do webhook inválido ou inativo.');
+    }
+} catch (Exception $e) {
+    registrarErro("Erro ao validar token de webhook: " . $e->getMessage());
+    enviarRespostaELogSemEmpresa(500, false, 'Erro interno ao processar webhook.');
 }
 
 // 2. Capturar os dados enviados (suporta JSON ou $_POST convencional)
@@ -223,10 +256,11 @@ if ($criarChamadoAtivo) {
     try {
         $db = obterConexao();
 
-        $sql = "INSERT INTO chamados (nome_cliente, tipo, mensagem, session_id, status, criado_em) 
-                VALUES (:nome_cliente, :tipo, :mensagem, :session_id, 'pendente', NOW())";
+        $sql = "INSERT INTO chamados (empresa_id, nome_cliente, tipo, mensagem, session_id, status, criado_em) 
+                VALUES (:empresa_id, :nome_cliente, :tipo, :mensagem, :session_id, 'pendente', NOW())";
 
         $stmt = $db->prepare($sql);
+        $stmt->bindValue(':empresa_id', $empresaId, PDO::PARAM_INT);
         $stmt->bindValue(':nome_cliente', $nomeCliente, PDO::PARAM_STR);
         $stmt->bindValue(':tipo', $tipoEvent, PDO::PARAM_STR);
         $stmt->bindValue(':mensagem', $mensagem, PDO::PARAM_STR);
@@ -245,9 +279,9 @@ if ($criarChamadoAtivo) {
             ];
 
             // Envia notificações push em segundo plano para os atendentes inscritos
-            enviarPushNotificacoes($nomeCliente, $tipoEvent, $mensagem, $sessionId);
+            enviarPushNotificacoes($nomeCliente, $tipoEvent, $mensagem, $sessionId, (int)$empresaId);
 
-            enviarRespostaELog(201, true, "Chamado ativo registrado e enviado ao painel.", $dadosSucesso, $dadosBrutos, $dados);
+            enviarRespostaELog(201, true, "Chamado ativo registrado e enviado ao painel.", $dadosSucesso, $dadosBrutos, $dados, (int)$empresaId);
         } else {
             throw new Exception("Falha ao executar a inserção do chamado ativo.");
         }
@@ -256,21 +290,25 @@ if ($criarChamadoAtivo) {
             'payload' => $dados,
             'ip' => $_SERVER['REMOTE_ADDR'] ?? 'desconhecido'
         ]);
-        enviarRespostaELog(500, false, "Erro interno do servidor ao salvar chamado ativo.", null, $dadosBrutos, $dados);
+        enviarRespostaELog(500, false, "Erro interno do servidor ao salvar chamado ativo.", null, $dadosBrutos, $dados, (int)$empresaId);
     }
 } else {
     // Se for apenas informativo, encerra com HTTP 200 registrando o log
-    enviarRespostaELog(200, true, "Evento processado e registrado no histórico de logs (sem chamado ativo).", null, $dadosBrutos, $dados);
+    enviarRespostaELog(200, true, "Evento processado e registrado no histórico de logs (sem chamado ativo).", null, $dadosBrutos, $dados, (int)$empresaId);
 }
 
 /**
  * Envia notificações push para todos os navegadores/celulares inscritos.
  */
-function enviarPushNotificacoes(?string $nomeCliente, string $tipo, ?string $mensagem, ?string $sessionId): void
+function enviarPushNotificacoes(?string $nomeCliente, string $tipo, ?string $mensagem, ?string $sessionId, int $empresaId): void
 {
     try {
         $db = obterConexao();
-        $stmt = $db->query("SELECT id, endpoint, keys_p256dh, keys_auth FROM pwa_subscriptions");
+        $stmt = $db->prepare("SELECT p.id, p.endpoint, p.keys_p256dh, p.keys_auth 
+                               FROM pwa_subscriptions p
+                               JOIN usuarios u ON p.usuario_id = u.id
+                               WHERE u.empresa_id = :empresa_id");
+        $stmt->execute([':empresa_id' => $empresaId]);
         $inscricoes = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         if (empty($inscricoes)) {

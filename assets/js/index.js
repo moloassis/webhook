@@ -1,9 +1,12 @@
 // Estado do Aplicativo
+        const tenantSlug = window.SYSTEM_CONFIG ? window.SYSTEM_CONFIG.tenantSlug : '';
+        const getTenantKey = (key) => tenantSlug ? `${tenantSlug}:${key}` : key;
+
         let chamadosList = [];
         let filterActive = 'todos';
         let audioContext = null;
-        let audioMuted = localStorage.getItem('audio_habilitado') === 'false';
-        let audioVolume = parseInt(localStorage.getItem('audio_volume') || '80', 10);
+        let audioMuted = localStorage.getItem(getTenantKey('audio_habilitado')) === 'false';
+        let audioVolume = parseInt(localStorage.getItem(getTenantKey('audio_volume')) || '80', 10);
         
         // Controle de Repetição de Alerta Sonoro Urgente (Atendimento Humano)
         let urgentAudioIntervalId = null;
@@ -278,7 +281,7 @@
             audioToggle.checked = !audioMuted;
             audioToggle.addEventListener('change', () => {
                 audioMuted = !audioToggle.checked;
-                localStorage.setItem('audio_habilitado', String(audioToggle.checked));
+                localStorage.setItem(getTenantKey('audio_habilitado'), String(audioToggle.checked));
             });
         }
 
@@ -289,7 +292,7 @@
 
             volumeControl.addEventListener('input', () => {
                 audioVolume = parseInt(volumeControl.value, 10);
-                localStorage.setItem('audio_volume', String(audioVolume));
+                localStorage.setItem(getTenantKey('audio_volume'), String(audioVolume));
                 if (volValue) volValue.textContent = audioVolume + '%';
             });
         }
@@ -307,8 +310,15 @@
             // Obtém o maior ID atual na lista local para sincronizar o cursor do stream
             const lastId = chamadosList.length > 0 ? Math.max(...chamadosList.map(c => c.id)) : 0;
 
-            // Instancia o EventSource nativo apontando para o endpoint PHP passando last_id
-            const source = new EventSource('sse-stream.php?last_id=' + lastId);
+            // Instancia o EventSource nativo apontando para o endpoint PHP passando last_id e JWT token
+            const token = window.SYSTEM_CONFIG ? window.SYSTEM_CONFIG.jwtToken : '';
+            const source = new EventSource('sse-stream.php?last_id=' + lastId + '&token=' + encodeURIComponent(token));
+
+            // Ouvinte de erros de autenticação disparados pelo SSE
+            source.addEventListener('auth_error', function(e) {
+                console.error("Erro de autenticação no SSE:", e.data);
+                window.location.href = 'login';
+            });
 
             // Quando a conexão é aberta com sucesso
             source.onopen = function() {
@@ -718,7 +728,8 @@
                 };
             }
 
-            fetch('webhook.php', {
+            const webhookToken = window.SYSTEM_CONFIG ? window.SYSTEM_CONFIG.webhookToken : '';
+            fetch('webhook.php?token=' + encodeURIComponent(webhookToken), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

@@ -6,20 +6,26 @@
 // Define o fuso horário oficial para o Brasil (Brasília)
 date_default_timezone_set('America/Sao_Paulo');
 
-// Host do banco de dados (geralmente 'localhost' ou '127.0.0.1' em VPS local)
-define('DB_HOST', 'helena-crm_helenacrm-db');
+// Detecção automática de ambiente (Local vs Produção na VPS Hostinger)
+$isLocal = (php_sapi_name() === 'cli' 
+    || (isset($_SERVER['HTTP_HOST']) && ($_SERVER['HTTP_HOST'] === 'localhost' || $_SERVER['HTTP_HOST'] === '127.0.0.1'))
+    || (isset($_SERVER['SERVER_NAME']) && ($_SERVER['SERVER_NAME'] === 'localhost' || $_SERVER['SERVER_NAME'] === '127.0.0.1')));
 
-// Porta do banco de dados (padrão MySQL: 3306)
-define('DB_PORT', '3306');
-
-// Nome do banco de dados
-define('DB_NAME', 'helena-crm');
-
-// Usuário do banco de dados
-define('DB_USER', 'mysql');
-
-// Senha do banco de dados
-define('DB_PASS', 'oou4f9n98k8qug5lovhe');
+if ($isLocal) {
+    // Configurações de Banco de Dados Local (Desenvolvimento)
+    define('DB_HOST', '127.0.0.1');
+    define('DB_PORT', '3306');
+    define('DB_NAME', 'webhook_db');
+    define('DB_USER', 'root');
+    define('DB_PASS', '');
+} else {
+    // Configurações da VPS Hostinger (Produção)
+    define('DB_HOST', 'helena-crm_helenacrm-db');
+    define('DB_PORT', '3306');
+    define('DB_NAME', 'helena-crm');
+    define('DB_USER', 'mysql');
+    define('DB_PASS', 'oou4f9n98k8qug5lovhe');
+}
 
 // Configurações adicionais de charset para evitar problemas de acentuação (UTF-8)
 define('DB_CHARSET', 'utf8mb4');
@@ -28,6 +34,9 @@ define('DB_CHARSET', 'utf8mb4');
 define('VAPID_PUBLIC_KEY', 'BOZa81Pmnrmb5N7i9XMDa4tgI_E_Im_6_lDH7dTjwwBn2aVm5nhk7UWxTDrmsJyZsSU96KPXhYO8GFoesloNDlw');
 define('VAPID_PRIVATE_KEY', 'UhVqVY_ySkbmE1DXrUg0IjQ8BY6gTO0KvmEt29lXSrg');
 define('VAPID_SUBJECT', 'mailto:contato@madeinai.com.br');
+
+// --- CHAVE SECRETA PARA ASSINATURA JWT ---
+define('JWT_SECRET', 'c651c2467d8b6fb6ad07a5436af7761274a28aed66a9ab4db4bd2921065aa425e');
 
 // --- CONFIGURAÇÃO DE LOGS DE ERROS ---
 // Não exibe erros brutos no navegador (essencial para que o SSE não quebre e por segurança na VPS Hostinger)

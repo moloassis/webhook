@@ -11,11 +11,7 @@ header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Cache-Control: post-check=0, pre-check=0', false);
 header('Pragma: no-cache');
 header('Connection: keep-alive');
-
-// IMPRESCINDÍVEL PARA VPS HOSTINGER (se rodar Nginx como proxy reverso)
-// Desativa o buffering de proxy do Nginx. Sem isso, o Nginx segura os dados 
-// no buffer e não os envia em tempo real para o frontend.
-header('X-Accel-Buffering: no');
+header('X-Accel-Buffering: no'); // Desativa o buffering de proxy do Nginx
 
 // 2. Desabilitar limite de tempo de execução do PHP para manter o script vivo
 set_time_limit(0);
@@ -25,55 +21,74 @@ if (ob_get_level()) {
     ob_end_clean();
 }
 
-// Carrega o banco de dados
+// Carrega dependências de BD e JWT
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/helpers/jwt.php';
+
+// --- AUTENTICAÇÃO VIA JWT ---
+// SSE no browser não permite cabeçalhos customizados nativamente, então passamos o JWT via Query String.
+$token = isset($_GET['token']) ? trim($_GET['token']) : '';
+$decoded = null;
+
+if ($token) {
+    $decoded = JWT::decode($token, JWT_SECRET);
+}
+
+if (!$decoded) {
+    echo "event: auth_error\n";
+    echo "data: " . json_encode(['erro' => true, 'mensagem' => 'Sessão inválida ou expirada. Faça login novamente.'], JSON_UNESCAPED_UNICODE) . "\n\n";
+    if (ob_get_length()) {
+        ob_flush();
+    }
+    flush();
+    exit;
+}
+
+$empresaId = (int)$decoded['empresa_id'];
+
 $db = obterConexao();
 
 // Captura o último ID de chamado recebido pelo frontend (evita duplicidade e perda de eventos)
 $lastId = isset($_GET['last_id']) ? (int)$_GET['last_id'] : 0;
 if ($lastId <= 0) {
-    // Se for conexão inicial limpa, monitoramos apenas eventos criados a partir de agora
-    $stmtMax = $db->query("SELECT MAX(id) AS max_id FROM chamados");
+    // Monitoramos apenas eventos criados a partir de agora para este tenant
+    $stmtMax = $db->prepare("SELECT MAX(id) AS max_id FROM chamados WHERE empresa_id = :empresa_id");
+    $stmtMax->execute([':empresa_id' => $empresaId]);
     $rowMax = $stmtMax->fetch();
     $lastId = $rowMax['max_id'] ? (int)$rowMax['max_id'] : 0;
 }
 
-/**
- * IMPORTANTE: Se o seu sistema usar sessões PHP (session_start), você DEVE
- * liberar o arquivo de sessão imediatamente usando 'session_write_close()'.
- * Caso contrário, o PHP bloqueará qualquer outra requisição concorrente do mesmo
- * usuário enquanto este script SSE estiver em loop (travando o carregamento do site).
- */
+// Libera a sessão PHP se existir para evitar bloqueio de requisições concorrentes (Session Locking)
 if (session_status() === PHP_SESSION_ACTIVE) {
     session_write_close();
 }
 
 // Loop infinito de transmissão em tempo real
 while (true) {
-    // 3. Gerenciamento de Conexão: Verificar se o cliente fechou a aba/dashboard.
-    // O PHP só percebe que o cliente desconectou quando tenta enviar dados.
-    // Por isso, enviamos um "comentário" SSE (iniciado com dois pontos) como batimento cardíaco (heartbeat).
+    // Heartbeat para verificar se o cliente ainda está conectado
     echo ": heartbeat\n\n";
     
-    // Tenta forçar o envio imediato para o navegador
     if (ob_get_length()) {
         ob_flush();
     }
     flush();
 
-    // Se o cliente desconectou, paramos o loop para poupar processador e conexão da VPS
+    // Se o cliente desconectou, encerra o loop
     if (connection_aborted()) {
         break;
     }
 
     try {
-        // 4. Buscar novos chamados pendentes (criados após o último transmitido)
+        // 4. Buscar novos chamados pendentes deste tenant (empresa_id)
         $sql = "SELECT id, nome_cliente, tipo, mensagem, session_id, criado_em 
                 FROM chamados 
-                WHERE status = 'pendente' AND id > :last_id 
+                WHERE status = 'pendente' AND id > :last_id AND empresa_id = :empresa_id 
                 ORDER BY id ASC";
         $stmt = $db->prepare($sql);
-        $stmt->execute([':last_id' => $lastId]);
+        $stmt->execute([
+            ':last_id' => $lastId,
+            ':empresa_id' => $empresaId
+        ]);
         $novosChamados = $stmt->fetchAll();
 
         if (!empty($novosChamados)) {
@@ -85,7 +100,6 @@ while (true) {
                 $lastId = (int)$chamado['id'];
             }
 
-            // Força a saída de dados acumulada para o frontend imediatamente
             if (ob_get_length()) {
                 ob_flush();
             }
@@ -93,20 +107,15 @@ while (true) {
         }
 
     } catch (PDOException $e) {
-        // Grava o erro no arquivo de log de forma segura
-        registrarErro("Erro de banco de dados no loop SSE: " . $e->getMessage());
+        registrarErro("Erro de banco de dados no loop SSE para empresa #{$empresaId}: " . $e->getMessage());
 
-        // Envia log de erro no formato SSE em caso de falha no banco
-        echo "data: " . json_encode(['erro' => true, 'mensagem' => 'A conexão com o banco de dados falhou temporariamente.']) . "\n\n";
+        echo "data: " . json_encode(['erro' => true, 'mensagem' => 'A conexão com o banco de dados falhou temporariamente.'], JSON_UNESCAPED_UNICODE) . "\n\n";
         if (ob_get_length()) {
             ob_flush();
         }
         flush();
     }
 
-    // 5. Evitar travamento do Servidor (Uso de CPU):
-    // Dormimos por 2 segundos. Sem esta pausa (sleep), o loop while rodará milhões de vezes
-    // por segundo consumindo 100% da CPU da VPS Hostinger, o que travará o servidor e resultará
-    // em erro 504/502 (Bad Gateway). 2 segundos é um tempo excelente para parecer instantâneo.
+    // Aguarda 2 segundos antes do próximo ciclo (evita consumo excessivo de CPU)
     sleep(2);
 }

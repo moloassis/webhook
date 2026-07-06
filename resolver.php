@@ -1,10 +1,22 @@
 <?php
 /**
  * Resolver Chamado - Atualiza o status do chamado para 'resolvido' no banco de dados.
+ * Garante que apenas chamados pertencentes à empresa do atendente sejam atualizados.
  */
 
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/helpers/tenant_context.php';
+
 header("Content-Type: application/json; charset=UTF-8");
+
+// Valida se o usuário está autenticado
+if (!isset($_SESSION['usuario_id'])) {
+    http_response_code(401);
+    echo json_encode(['sucesso' => false, 'mensagem' => 'Usuário não autenticado.']);
+    exit;
+}
+
+$empresaId = (int)$_SESSION['tenant_ativo_id'];
 
 // Valida se o método é POST para segurança
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -24,16 +36,19 @@ if ($id <= 0) {
 try {
     $db = obterConexao();
     
-    // Atualiza o chamado no banco para 'resolvido' para que não reapareça
-    $stmt = $db->prepare("UPDATE chamados SET status = 'resolvido' WHERE id = :id");
-    $stmt->execute([':id' => $id]);
+    // Atualiza o chamado no banco para 'resolvido' filtrando pelo empresa_id do tenant logado
+    $stmt = $db->prepare("UPDATE chamados SET status = 'resolvido' WHERE id = :id AND empresa_id = :empresa_id");
+    $stmt->execute([
+        ':id' => $id,
+        ':empresa_id' => $empresaId
+    ]);
     
     echo json_encode([
         'sucesso' => true, 
         'mensagem' => 'Chamado dispensado e retirado da fila.'
     ], JSON_UNESCAPED_UNICODE);
 } catch (Exception $e) {
-    registrarErro("Erro ao dispensar chamado #{$id}: " . $e->getMessage());
+    registrarErro("Erro ao dispensar chamado #{$id} para empresa #{$empresaId}: " . $e->getMessage());
     http_response_code(500);
     echo json_encode([
         'sucesso' => false, 

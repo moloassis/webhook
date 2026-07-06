@@ -4,11 +4,14 @@
  * Renderizado dentro do roteador index.php
  */
 
-// Ação opcional: Limpar logs se solicitado pelo administrador
+$empresaId = (int)$_SESSION['tenant_ativo_id'];
+
+// Ação opcional: Limpar logs se solicitado pelo administrador (isolar por empresa_id)
 if (isset($_POST['action']) && $_POST['action'] === 'clear') {
     try {
         $db = obterConexao();
-        $db->exec("TRUNCATE TABLE webhook_logs");
+        $stmtDel = $db->prepare("DELETE FROM webhook_logs WHERE empresa_id = :empresa_id");
+        $stmtDel->execute([':empresa_id' => $empresaId]);
         // Recarrega a URL atual de forma limpa para limpar o POST
         header("Location: " . $_SERVER['REQUEST_URI']);
         exit;
@@ -17,16 +20,20 @@ if (isset($_POST['action']) && $_POST['action'] === 'clear') {
     }
 }
 
-// Buscar os logs de acordo com o limite configurado no sistema
+// Buscar os logs de acordo com o limite configurado no sistema (isolar por empresa_id)
 $limiteLogs = (int) obterConfiguracao('limite_logs', 100);
 
 try {
     $db = obterConexao();
     $sql = "SELECT id, metodo, ip, event_type, payload, status_resposta, mensagem_resposta, criado_em 
             FROM webhook_logs 
+            WHERE empresa_id = :empresa_id
             ORDER BY id DESC 
-            LIMIT " . $limiteLogs;
-    $stmt = $db->query($sql);
+            LIMIT :limite";
+    $stmt = $db->prepare($sql);
+    $stmt->bindValue(':empresa_id', $empresaId, PDO::PARAM_INT);
+    $stmt->bindValue(':limite', $limiteLogs, PDO::PARAM_INT);
+    $stmt->execute();
     $logs = $stmt->fetchAll();
 } catch (Exception $e) {
     $logs = [];
@@ -55,7 +62,7 @@ foreach ($logs as $log) {
             <p style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 4px;">Auditoria e monitoramento de requisições de webhooks recebidos</p>
         </div>
         <div>
-            <form action="logs" method="POST" onsubmit="return confirm('Tem certeza que deseja apagar todos os logs de webhooks salvos?')">
+            <form action="<?php echo htmlspecialchars($_SERVER['REQUEST_URI'], ENT_QUOTES, 'UTF-8'); ?>" method="POST" onsubmit="return confirm('Tem certeza que deseja apagar todos os logs de webhooks salvos?')">
                 <input type="hidden" name="action" value="clear">
                 <button type="submit" class="btn-premium" style="background: rgba(255, 71, 87, 0.15); border-color: rgba(255, 71, 87, 0.3); color: var(--color-atendimento); font-weight: 600; width: auto; font-size: 0.8rem; padding: 0.5rem 1rem;">
                     🗑️ Limpar Histórico

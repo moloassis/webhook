@@ -51,30 +51,49 @@ function obterConexao(): PDO {
 }
 
 /**
- * Obtém o valor de uma configuração salva no banco de dados.
- * Cria a tabela de configurações se ela ainda não existir.
+ * Obtém o valor de uma configuração salva no banco de dados para um tenant específico.
  * 
  * @param string $chave Identificador da configuração.
  * @param mixed $padrao Valor de retorno padrão se a configuração não existir.
+ * @param int|null $empresaId ID da empresa (se omitido, tenta obter do contexto de sessão/tenant).
  * @return mixed
  */
-function obterConfiguracao(string $chave, $padrao = null)
+function obterConfiguracao(string $chave, $padrao = null, ?int $empresaId = null)
 {
+    // Resolução de tenant ativo
+    if ($empresaId === null) {
+        if (isset($_SESSION['tenant_ativo_id'])) {
+            $empresaId = (int)$_SESSION['tenant_ativo_id'];
+        } elseif (isset($_SESSION['empresa_id'])) {
+            $empresaId = (int)$_SESSION['empresa_id'];
+        }
+    }
+
+    if ($empresaId === null) {
+        return $padrao;
+    }
+
     try {
         $db = obterConexao();
-        $stmt = $db->prepare("SELECT valor FROM sistema_config WHERE chave = :chave");
-        $stmt->execute([':chave' => $chave]);
+        $stmt = $db->prepare("SELECT valor FROM sistema_config WHERE empresa_id = :empresa_id AND chave = :chave");
+        $stmt->execute([
+            ':empresa_id' => $empresaId,
+            ':chave' => $chave
+        ]);
         $res = $stmt->fetch();
         if ($res !== false) {
             return $res['valor'];
         }
     } catch (PDOException $e) {
-        // Se a tabela não existir, tenta criar e prossegue
+        // Se a tabela não existir, tenta criar e prossegue (mantendo suporte automático)
         try {
             $db = obterConexao();
             $db->exec("CREATE TABLE IF NOT EXISTS `sistema_config` (
-                `chave` VARCHAR(255) PRIMARY KEY,
-                `valor` TEXT NOT NULL
+                `empresa_id` INT NOT NULL,
+                `chave` VARCHAR(255) NOT NULL,
+                `valor` TEXT NOT NULL,
+                PRIMARY KEY (`empresa_id`, `chave`),
+                CONSTRAINT `fk_config_empresa` FOREIGN KEY (`empresa_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         } catch (Exception $ex) {
             registrarErro("Erro ao criar tabela sistema_config: " . $ex->getMessage());
@@ -84,20 +103,35 @@ function obterConfiguracao(string $chave, $padrao = null)
 }
 
 /**
- * Grava ou atualiza uma configuração no banco de dados.
- * Cria a tabela de configurações se ela ainda não existir.
+ * Grava ou atualiza uma configuração no banco de dados para um tenant específico.
  * 
  * @param string $chave Identificador da configuração.
  * @param string $valor Valor a ser gravado.
+ * @param int|null $empresaId ID da empresa.
  * @return bool
  */
-function salvarConfiguracao(string $chave, string $valor): bool
+function salvarConfiguracao(string $chave, string $valor, ?int $empresaId = null): bool
 {
+    // Resolução de tenant ativo
+    if ($empresaId === null) {
+        if (isset($_SESSION['tenant_ativo_id'])) {
+            $empresaId = (int)$_SESSION['tenant_ativo_id'];
+        } elseif (isset($_SESSION['empresa_id'])) {
+            $empresaId = (int)$_SESSION['empresa_id'];
+        }
+    }
+
+    if ($empresaId === null) {
+        registrarErro("Erro ao salvar configuração '{$chave}': Empresa ID não resolvido.");
+        return false;
+    }
+
     try {
         $db = obterConexao();
-        $stmt = $db->prepare("INSERT INTO sistema_config (chave, valor) VALUES (:chave, :valor) 
+        $stmt = $db->prepare("INSERT INTO sistema_config (empresa_id, chave, valor) VALUES (:empresa_id, :chave, :valor) 
             ON DUPLICATE KEY UPDATE valor = :valor_update");
         return $stmt->execute([
+            ':empresa_id' => $empresaId,
             ':chave' => $chave,
             ':valor' => $valor,
             ':valor_update' => $valor
@@ -107,19 +141,24 @@ function salvarConfiguracao(string $chave, string $valor): bool
         try {
             $db = obterConexao();
             $db->exec("CREATE TABLE IF NOT EXISTS `sistema_config` (
-                `chave` VARCHAR(255) PRIMARY KEY,
-                `valor` TEXT NOT NULL
+                `empresa_id` INT NOT NULL,
+                `chave` VARCHAR(255) NOT NULL,
+                `valor` TEXT NOT NULL,
+                PRIMARY KEY (`empresa_id`, `chave`),
+                CONSTRAINT `fk_config_empresa` FOREIGN KEY (`empresa_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
             
-            $stmt = $db->prepare("INSERT INTO sistema_config (chave, valor) VALUES (:chave, :valor) 
+            $stmt = $db->prepare("INSERT INTO sistema_config (empresa_id, chave, valor) VALUES (:empresa_id, :chave, :valor) 
                 ON DUPLICATE KEY UPDATE valor = :valor_update");
             return $stmt->execute([
+                ':empresa_id' => $empresaId,
                 ':chave' => $chave,
                 ':valor' => $valor,
                 ':valor_update' => $valor
             ]);
         } catch (Exception $ex) {
             registrarErro("Erro ao salvar configuração no banco: " . $ex->getMessage(), [
+                'empresa_id' => $empresaId,
                 'chave' => $chave,
                 'valor' => $valor
             ]);
