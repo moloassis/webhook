@@ -1,0 +1,38 @@
+/**
+ * Estilos do Painel Superadmin - SaaS
+ */
+
+:root {
+    --color-default: #70a1ff;
+    --color-lead: #2ed573;
+    --color-atendimento: #ff4757;
+}
+
+body {
+    background: radial-gradient(circle at top, #140f36 0%, #08080c 100%);
+    font-family: 'Outfit', sans-serif;
+    color: var(--text-primary);
+    min-height: 100vh;
+    padding: 2rem;
+    box-sizing: border-box;
+}
+
+header.sa-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1.5rem;
+}
+
+.panel-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+}
+
+@media (max-width: 900px) {
+    .panel-grid {
+        grid-template-columns: 1fr;
+    }
+}

@@ -4,56 +4,10 @@
  * Renderizado dentro do roteador index.php
  */
 
-$empresaId = (int)$_SESSION['tenant_ativo_id'];
-
-// Ação opcional: Limpar logs se solicitado pelo administrador (isolar por empresa_id)
-if (isset($_POST['action']) && $_POST['action'] === 'clear') {
-    try {
-        $db = obterConexao();
-        $stmtDel = $db->prepare("DELETE FROM webhook_logs WHERE empresa_id = :empresa_id");
-        $stmtDel->execute([':empresa_id' => $empresaId]);
-        // Recarrega a URL atual de forma limpa para limpar o POST
-        header("Location: " . $_SERVER['REQUEST_URI']);
-        exit;
-    } catch (Exception $e) {
-        $erroLimpar = "Falha ao limpar logs: " . $e->getMessage();
-    }
-}
-
-// Buscar os logs de acordo com o limite configurado no sistema (isolar por empresa_id)
-$limiteLogs = (int) obterConfiguracao('limite_logs', 100);
-
-try {
-    $db = obterConexao();
-    $sql = "SELECT id, metodo, ip, event_type, payload, status_resposta, mensagem_resposta, criado_em 
-            FROM webhook_logs 
-            WHERE empresa_id = :empresa_id
-            ORDER BY id DESC 
-            LIMIT :limite";
-    $stmt = $db->prepare($sql);
-    $stmt->bindValue(':empresa_id', $empresaId, PDO::PARAM_INT);
-    $stmt->bindValue(':limite', $limiteLogs, PDO::PARAM_INT);
-    $stmt->execute();
-    $logs = $stmt->fetchAll();
-} catch (Exception $e) {
-    $logs = [];
-    $erroListar = "Erro ao buscar logs do banco de dados: " . $e->getMessage();
-}
-
-// Calcular estatísticas básicas dos logs carregados
-$total = count($logs);
-$sucessos = 0;
-$falhas = 0;
-foreach ($logs as $log) {
-    if ($log['status_resposta'] >= 200 && $log['status_resposta'] < 300) {
-        $sucessos++;
-    } else {
-        $falhas++;
-    }
-}
+require_once __DIR__ . '/../controllers/logs_controller.php';
 ?>
 
-<div class="container" style="max-width: 1200px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 1.5rem; padding-bottom: 2rem;">
+<div class="container">
 
     <!-- Subheader Interno do Painel de Logs -->
     <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 0.8rem; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; gap: 1rem;">

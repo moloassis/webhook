@@ -139,7 +139,7 @@
         main {
             flex: 1;
             padding: 2rem;
-            max-width: 1400px;
+            max-width: 1440px;
             width: 100%;
             margin: 0 auto;
         }
@@ -1242,4 +1242,15 @@
                 margin-top: 0.5rem;
                 min-height: 48px;
             }
+        }
+
+        /* Container de Layout Padronizado (Multi-Tenant) */
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            padding-bottom: 2rem;
         }
