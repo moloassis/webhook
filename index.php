@@ -27,6 +27,11 @@ switch ($route) {
         require_once __DIR__ . '/views/logs.php';
         break;
 
+    case 'settings':
+    case 'configuracoes':
+        require_once __DIR__ . '/views/settings.php';
+        break;
+
     case 'dashboard':
     default:
         require_once __DIR__ . '/views/dashboard.php';

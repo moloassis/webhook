@@ -20,31 +20,6 @@
                 </div>
             </div>
             
-            <!-- Painel de Controles de Áudio -->
-            <div class="panel-box">
-                <h2 class="panel-title">Notificações</h2>
-                <div class="audio-controls">
-                    <div class="control-row">
-                        <span class="label-text">Habilitar Alerta Sonoro</span>
-                        <label class="switch">
-                            <input type="checkbox" id="audioToggle" checked>
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                    <div class="control-row" style="flex-direction: column; align-items: flex-start; gap: 0.4rem;">
-                        <span class="label-text">Volume</span>
-                        <input type="range" id="volumeControl" class="range-slider" min="0" max="100" value="80">
-                    </div>
-                    <button id="btnTestSound" class="btn-premium" style="margin-bottom: 0.4rem;">Testar Áudio Sintético 🔊</button>
-                    
-                    <!-- Controles de Web Push (Ocultos por padrão, exibidos se suportados) -->
-                    <div id="pushControlRow" style="display: none; border-top: 1px solid var(--border-color); padding-top: 0.8rem; margin-top: 0.8rem; flex-direction: column; gap: 0.5rem; width: 100%;">
-                        <span class="label-text" style="font-weight: 500;">Notificações Push (Celular)</span>
-                        <button id="btnSubscribePush" class="btn-premium" style="width: 100%; margin: 0; background: linear-gradient(135deg, #ff4500, #ff8c00);">Ativar Notificações 🔔</button>
-                        <span id="pushStatusMsg" class="label-text" style="font-size: 0.7rem; color: var(--text-secondary); text-align: center; width: 100%;">Verificando suporte a push...</span>
-                    </div>
-                </div>
-            </div>
 
             <!-- Webhook Simulator (Superútil para testes rápidos e demonstração) -->
             <div class="panel-box">

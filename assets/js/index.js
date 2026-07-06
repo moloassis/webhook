@@ -2,7 +2,8 @@
         let chamadosList = [];
         let filterActive = 'todos';
         let audioContext = null;
-        let audioMuted = false;
+        let audioMuted = localStorage.getItem('audio_habilitado') === 'false';
+        let audioVolume = parseInt(localStorage.getItem('audio_volume') || '80', 10);
         
         // Controle de Repetição de Alerta Sonoro Urgente (Atendimento Humano)
         let urgentAudioIntervalId = null;
@@ -154,20 +155,23 @@
             tocarSomSintetico('default');
         }
 
-        // Tenta tocar notificacao.mp3. Se falhar ou der erro (não encontrado), usa sintetizador
+        // Tenta tocar o arquivo de áudio configurado. Se falhar ou der erro, usa sintetizador
         function tocarAlertaSonoro(tipo) {
-            const habilitado = audioToggle ? audioToggle.checked : !audioMuted;
+            const habilitado = !audioMuted;
             if (!habilitado) return;
 
-            const mp3 = new Audio('assets/audio/notificacao.mp3');
+            const audioSrc = (window.SYSTEM_CONFIG && window.SYSTEM_CONFIG.audioAlerta)
+                ? window.SYSTEM_CONFIG.audioAlerta
+                : 'assets/audio/notificacao.mp3';
+
+            const mp3 = new Audio(audioSrc);
             
-            // Força volume máximo (1.0) se for atendimento humano, senão usa o controle de volume
-            const valVolume = volumeControl ? volumeControl.value : 80;
-            let volume = (tipo === 'atendimento_humano') ? 1.0 : (valVolume / 100);
+            // Força volume máximo (1.0) se for atendimento humano, senão usa o controle de volume persistido
+            let volume = (tipo === 'atendimento_humano') ? 1.0 : (audioVolume / 100);
             mp3.volume = volume;
             
             mp3.play().catch(err => {
-                console.warn("Arquivo notificacao.mp3 indisponível ou bloqueado. Usando som sintético Web Audio API.");
+                console.warn("Arquivo de áudio customizado indisponível ou bloqueado. Usando som sintético Web Audio API.", err);
                 tocarSomSintetico(tipo);
             });
         }
@@ -184,9 +188,8 @@
                     return;
                 }
 
-                // Força volume 100% (1.0) se for chamado urgente, senão respeita o slider
-                const valVolume = volumeControl ? volumeControl.value : 80;
-                const volume = (tipo === 'atendimento_humano') ? 1.0 : (valVolume / 100);
+                // Força volume 100% (1.0) se for chamado urgente, senão respeita o slider persistido
+                const volume = (tipo === 'atendimento_humano') ? 1.0 : (audioVolume / 100);
                 
                 // Volume geral
                 const gainNode = audioContext.createGain();
@@ -270,17 +273,32 @@
             }
         }
 
-        // Listener dos controles de som
-        if (btnTestSound) {
-            btnTestSound.addEventListener('click', () => {
-                ativandoAudioCtx();
-                tocarSomSintetico(simTipo ? simTipo.value : 'default');
+        // Inicialização e listeners dos controles de áudio locais (persistidos)
+        if (audioToggle) {
+            audioToggle.checked = !audioMuted;
+            audioToggle.addEventListener('change', () => {
+                audioMuted = !audioToggle.checked;
+                localStorage.setItem('audio_habilitado', String(audioToggle.checked));
             });
         }
 
-        if (audioToggle) {
-            audioToggle.addEventListener('change', () => {
-                audioMuted = !audioToggle.checked;
+        if (volumeControl) {
+            volumeControl.value = audioVolume;
+            const volValue = document.getElementById('volumeValue');
+            if (volValue) volValue.textContent = audioVolume + '%';
+
+            volumeControl.addEventListener('input', () => {
+                audioVolume = parseInt(volumeControl.value, 10);
+                localStorage.setItem('audio_volume', String(audioVolume));
+                if (volValue) volValue.textContent = audioVolume + '%';
+            });
+        }
+
+        if (btnTestSound) {
+            btnTestSound.addEventListener('click', () => {
+                ativandoAudioCtx();
+                // Testar com o som ativo configurado
+                tocarAlertaSonoro(simTipo ? simTipo.value : 'default');
             });
         }
 
@@ -496,7 +514,6 @@
             }
 
             const alertsGrid = document.getElementById('alertsGrid');
-            const emptyState = document.getElementById('emptyState');
             if (!alertsGrid) {
                 // Se não estiver na dashboard, apenas gerencia os sons repetitivos urgentes
                 gerenciarAlertasSonorosUrgentes();

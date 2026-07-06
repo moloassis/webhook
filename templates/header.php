@@ -21,6 +21,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="assets/css/index.css">
+    
+    <!-- Configurações do Sistema injetadas do Backend -->
+    <script>
+        window.SYSTEM_CONFIG = {
+            audioAlerta: "<?php echo htmlspecialchars(obterConfiguracao('audio_alerta', 'assets/audio/notificacao.mp3'), ENT_QUOTES, 'UTF-8'); ?>",
+            limiteLogs: <?php echo (int) obterConfiguracao('limite_logs', 100); ?>
+        };
+    </script>
 </head>
 <body>
 
@@ -47,16 +55,16 @@
         </a>
         
         <div class="header-actions">
-            <!-- Alterna entre a visualização de Logs e Painel principal -->
-            <?php if ($route === 'logs'): ?>
-                <a href="./" class="btn-view-logs" style="background: rgba(30, 144, 255, 0.15); border-color: var(--color-default);">
-                    📊 Dashboard
-                </a>
-            <?php else: ?>
-                <a href="logs" class="btn-view-logs" onmouseover="this.style.borderColor='var(--color-default)'; this.style.background='rgba(30, 144, 255, 0.1)';" onmouseout="this.style.borderColor='var(--border-color)'; this.style.background='rgba(255, 255, 255, 0.05)';">
-                    🔍 Webhooks
-                </a>
-            <?php endif; ?>
+            <!-- Navegação Tabular de Páginas -->
+            <a href="./" class="btn-view-logs" style="<?php echo ($route === 'dashboard') ? 'background: rgba(30, 144, 255, 0.15); border-color: var(--color-default); font-weight: 600;' : ''; ?>" onmouseover="this.style.borderColor='var(--color-default)';" onmouseout="<?php echo ($route === 'dashboard') ? '' : "this.style.borderColor='var(--border-color)';"; ?>">
+                📊 Dashboard
+            </a>
+            <a href="logs" class="btn-view-logs" style="<?php echo ($route === 'logs') ? 'background: rgba(30, 144, 255, 0.15); border-color: var(--color-default); font-weight: 600;' : ''; ?>" onmouseover="this.style.borderColor='var(--color-default)';" onmouseout="<?php echo ($route === 'logs') ? '' : "this.style.borderColor='var(--border-color)';"; ?>">
+                🔍 Webhooks
+            </a>
+            <a href="settings" class="btn-view-logs" style="<?php echo ($route === 'settings' || $route === 'configuracoes') ? 'background: rgba(30, 144, 255, 0.15); border-color: var(--color-default); font-weight: 600;' : ''; ?>" onmouseover="this.style.borderColor='var(--color-default)';" onmouseout="<?php echo ($route === 'settings' || $route === 'configuracoes') ? '' : "this.style.borderColor='var(--border-color)';"; ?>">
+                ⚙️ Configurações
+            </a>
             
             <!-- Badge de Conexão SSE -->
             <div id="statusBadge" class="status-badge connecting">
@@ -67,7 +75,7 @@
     </header>
 
     <!-- Conteúdo Principal -->
-    <main class="<?php echo ($route === 'logs') ? 'main-full' : 'main-grid'; ?>">
+    <main class="<?php echo ($route === 'logs' || $route === 'settings' || $route === 'configuracoes') ? 'main-full' : 'main-grid'; ?>">
         
         <!-- Banner de Permissão de Áudio do Navegador (Exibido se o autoplay estiver bloqueado) -->
         <div id="audioBanner" class="audio-banner" style="display: none; grid-column: 1 / -1; width: 100%;">

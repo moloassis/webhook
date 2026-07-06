@@ -17,13 +17,15 @@ if (isset($_POST['action']) && $_POST['action'] === 'clear') {
     }
 }
 
-// Buscar os últimos 100 logs registrados
+// Buscar os logs de acordo com o limite configurado no sistema
+$limiteLogs = (int) obterConfiguracao('limite_logs', 100);
+
 try {
     $db = obterConexao();
     $sql = "SELECT id, metodo, ip, event_type, payload, status_resposta, mensagem_resposta, criado_em 
             FROM webhook_logs 
             ORDER BY id DESC 
-            LIMIT 100";
+            LIMIT " . $limiteLogs;
     $stmt = $db->query($sql);
     $logs = $stmt->fetchAll();
 } catch (Exception $e) {
@@ -78,7 +80,7 @@ foreach ($logs as $log) {
     <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
         <div class="stat-card">
             <span class="stat-val"><?= $total ?></span>
-            <span class="stat-label">Total Recebidos (Limite 100)</span>
+            <span class="stat-label">Total Recebidos (Limite <?= $limiteLogs ?>)</span>
         </div>
         <div class="stat-card" style="border-left: 3.5px solid var(--color-lead);">
             <span class="stat-val" style="color: var(--color-lead);"><?= $sucessos ?></span>
