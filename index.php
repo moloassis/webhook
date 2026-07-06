@@ -67,6 +67,22 @@ if ($tenantSlug !== null) {
     
     // Armazena a rota para que views saibam qual renderizar
     $currentView = $subRoute;
+
+    // Detecta requisições parciais (AJAX/POST) para responder sem o layout HTML global (header/footer)
+    $isAjax = isset($_GET['render_library']) || isset($_POST['ajax']) || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
+    $isPost = ($_SERVER['REQUEST_METHOD'] === 'POST');
+
+    if ($isAjax || $isPost) {
+        switch ($currentView) {
+            case 'logs':
+                require_once __DIR__ . '/controllers/logs_controller.php';
+                exit;
+            case 'settings':
+            case 'configuracoes':
+                require_once __DIR__ . '/controllers/settings_controller.php';
+                exit;
+        }
+    }
     
     // Injeta o cabeçalho dinâmico (com CSS customizado e modal)
     require_once __DIR__ . '/templates/header.php';
