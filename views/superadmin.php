@@ -87,9 +87,20 @@ require_once __DIR__ . '/../controllers/superadmin_controller.php';
                                             /t/<?= htmlspecialchars($t['slug']) ?>/
                                         </td>
                                         <td style="padding: 0.8rem;">
-                                            <span style="font-family: monospace; font-size: 0.8rem; background: rgba(255,255,255,0.03); padding: 0.2rem 0.5rem; border-radius: 6px; border: 1px solid var(--border-color); color: var(--text-secondary);" title="Token Completo: <?= htmlspecialchars($t['webhook_token']) ?>">
-                                                <?= htmlspecialchars(substr($t['webhook_token'], 0, 8)) ?>...
-                                            </span>
+                                            <?php
+                                            $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
+                                            $domainName = $_SERVER['HTTP_HOST'];
+                                            $basePath = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
+                                            $webhookUrl = $protocol . $domainName . $basePath . '/webhook.php?token=' . $t['webhook_token'];
+                                            ?>
+                                            <div style="display: flex; align-items: center; gap: 8px;">
+                                                <span style="font-family: monospace; font-size: 0.8rem; background: rgba(255,255,255,0.03); padding: 0.2rem 0.5rem; border-radius: 6px; border: 1px solid var(--border-color); color: var(--text-secondary);" title="Token Completo: <?= htmlspecialchars($t['webhook_token']) ?>">
+                                                    <?= htmlspecialchars(substr($t['webhook_token'], 0, 8)) ?>...
+                                                </span>
+                                                <button type="button" onclick="copiarUrlWebhook(this, '<?= htmlspecialchars($webhookUrl) ?>')" class="btn-inspect" style="font-size: 0.72rem; padding: 0.25rem 0.5rem; border-radius: 6px; cursor: pointer; border-color: rgba(30, 144, 255, 0.25); color: #1e90ff; background: rgba(30, 144, 255, 0.12); border-style: solid; border-width: 1px; transition: all 0.2s; font-weight: 500;" onmouseover="this.style.background='rgba(30,144,255,0.2)'" onmouseout="this.style.background='rgba(30,144,255,0.12)'" title="Copiar URL completa do webhook com token">
+                                                    📋 Copiar URL
+                                                </button>
+                                            </div>
                                         </td>
                                         <td style="padding: 0.8rem; text-align: center; font-weight: 500;"><?= $t['user_count'] ?></td>
                                         <td style="padding: 0.8rem; text-align: center; color: var(--color-lead); font-weight: 500;"><?= $t['chamado_count'] ?></td>
@@ -164,6 +175,27 @@ require_once __DIR__ . '/../controllers/superadmin_controller.php';
 
     </div>
 </div>
+<script>
+function copiarUrlWebhook(btn, url) {
+    navigator.clipboard.writeText(url).then(function() {
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '✔ Copiado!';
+        btn.style.background = 'rgba(46, 213, 115, 0.2)';
+        btn.style.borderColor = '#2ed573';
+        btn.style.color = '#2ed573';
+        
+        setTimeout(function() {
+            btn.innerHTML = originalText;
+            btn.style.background = 'rgba(30, 144, 255, 0.12)';
+            btn.style.borderColor = 'rgba(30, 144, 255, 0.25)';
+            btn.style.color = '#1e90ff';
+        }, 2000);
+    }).catch(function(err) {
+        console.error('Erro ao copiar: ', err);
+        alert('Erro ao copiar URL para a área de transferência.');
+    });
+}
+</script>
 
 </body>
 </html>
