@@ -63,8 +63,12 @@ self.addEventListener('fetch', event => {
           return cachedResponse;
         }
 
-        // Se não estiver no cache, busca na rede
-        return fetch(event.request);
+        // Se não estiver no cache, busca na rede e trata erros de rede de forma amigável
+        return fetch(event.request).catch(err => {
+          console.warn('Falha ao buscar recurso na rede pelo Service Worker:', event.request.url, err);
+          // Retorna uma resposta vazia de erro para evitar quebras de promise não capturadas no console
+          return new Response('', { status: 480, statusText: 'Network Error' });
+        });
       })
   );
 });

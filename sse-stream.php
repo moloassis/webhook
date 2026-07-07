@@ -12,12 +12,19 @@ header('Cache-Control: post-check=0, pre-check=0', false);
 header('Pragma: no-cache');
 header('Connection: keep-alive');
 header('X-Accel-Buffering: no'); // Desativa o buffering de proxy do Nginx
+header('Content-Encoding: none'); // Evita compressão de saída adicional pelo servidor web
 
-// 2. Desabilitar limite de tempo de execução do PHP para manter o script vivo
+// 2. Desabilitar limites e otimizar output buffering para streaming em tempo real
 set_time_limit(0);
 
-// Desativa completamente o output buffering do PHP se estiver ativo
-if (ob_get_level()) {
+// Desativa a compressão zlib do PHP (essencial para que o streaming funcione)
+ini_set('zlib.output_compression', 'Off');
+@ini_set('output_buffering', 'Off');
+@ini_set('implicit_flush', 'On');
+ob_implicit_flush(true);
+
+// Limpa completamente todas as camadas de buffers de saída ativos do PHP
+while (ob_get_level()) {
     ob_end_clean();
 }
 
