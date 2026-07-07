@@ -5,6 +5,15 @@
         let chamadosList = [];
         let filterActive = 'todos';
         const alertasEnviados = new Set();
+        
+        // Calcula a diferença de relógio (skew) entre o navegador e o servidor
+        let clockSkew = 0;
+        if (window.SYSTEM_CONFIG && window.SYSTEM_CONFIG.serverTime) {
+            const serverTimeDate = new Date(window.SYSTEM_CONFIG.serverTime);
+            clockSkew = new Date() - serverTimeDate;
+            console.log("Diferença de relógio (clock skew) detectada:", clockSkew / 1000, "segundos");
+        }
+
         let audioContext = null;
         let audioMuted = localStorage.getItem(getTenantKey('audio_habilitado')) === 'false';
         let audioVolume = parseInt(localStorage.getItem(getTenantKey('audio_volume')) || '80', 10);
@@ -574,9 +583,10 @@
                      second: '2-digit'
                  });
  
-                 // Calcula tempo de espera em minutos para atendimento humano
+                 // Calcula tempo de espera em minutos para atendimento humano (ajustado pelo clockSkew do servidor)
                  const criadoEmDate = new Date(item.criado_em.replace(/-/g, "/"));
-                 const diffSeconds = Math.floor((new Date() - criadoEmDate) / 1000);
+                 const adjustedNow = new Date(new Date().getTime() - clockSkew);
+                 const diffSeconds = Math.floor((adjustedNow - criadoEmDate) / 1000);
                  const diffMinutes = Math.floor(diffSeconds / 60);
                  const limiteMinutos = (window.SYSTEM_CONFIG && window.SYSTEM_CONFIG.tempoLimiteEspera) ? parseInt(window.SYSTEM_CONFIG.tempoLimiteEspera, 10) : 5;
  

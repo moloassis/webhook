@@ -171,7 +171,8 @@ $corSecundariaGlow = hex2rgba($corSecundaria, 0.4);
             jwtToken: "<?php echo $_SESSION['jwt_token'] ?? ''; ?>",
             tenantSlug: "<?php echo htmlspecialchars($tenantSlug, ENT_QUOTES, 'UTF-8'); ?>",
             webhookToken: "<?php echo htmlspecialchars($tenantConfig['webhook_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>",
-            tempoLimiteEspera: <?php echo (int)($tenantConfig['tempo_limite_espera'] ?? 5); ?>
+            tempoLimiteEspera: <?php echo (int)($tenantConfig['tempo_limite_espera'] ?? 5); ?>,
+            serverTime: "<?php echo date('Y/m/d H:i:s'); ?>"
         };
     </script>
 </head>

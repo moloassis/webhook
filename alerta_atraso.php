@@ -43,7 +43,11 @@ try {
         $criadoEm = new DateTime($chamado['criado_em']);
         $agora = new DateTime();
         $diff = $agora->diff($criadoEm);
-        $minutos = ($diff->days * 24 * 60) + ($diff->h * 60) + $diff->i;
+        
+        $minutos = 0;
+        if ($diff->invert === 1) {
+            $minutos = ($diff->days * 24 * 60) + ($diff->h * 60) + $diff->i;
+        }
         
         $cliente = $chamado['nome_cliente'] ?: 'Desconhecido';
         

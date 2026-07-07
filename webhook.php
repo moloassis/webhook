@@ -161,8 +161,8 @@ if ($eventType) {
             $mensagem = "IA ({$origin}) enviou mensagem para {$to}: \"{$text}\"";
             $criarChamadoAtivo = false; // Apenas informativo
 
-            // Se uma resposta foi enviada ao cliente, encerra os chamados de atendimento humano para este contato
-            if (!empty($sessionId)) {
+            // Se uma resposta foi enviada pelo atendente humano (origem DEFAULT), encerra os chamados de suporte para este contato
+            if ($origin === 'DEFAULT' && !empty($sessionId)) {
                 try {
                     $db = obterConexao();
                     $stmtUpdate = $db->prepare("UPDATE chamados SET status = 'resolvido' WHERE session_id = :session_id AND status = 'pendente' AND empresa_id = :empresa_id");
