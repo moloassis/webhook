@@ -4,12 +4,12 @@
  * Gerencia o fluxo de rotas, sessões, contextos de tenant e segurança.
  */
 
+// 1. Carrega o banco de dados e arquivos de configuração globais
+require_once __DIR__ . '/db.php';
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-
-// 1. Carrega o banco de dados e arquivos de configuração globais
-require_once __DIR__ . '/db.php';
 
 // 2. Calcula dinamicamente o caminho base da URL
 $baseUrl = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\') . '/';

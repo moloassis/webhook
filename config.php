@@ -7,8 +7,10 @@
 date_default_timezone_set('America/Sao_Paulo');
 
 // Configurações globais de duração da sessão PHP (24 horas) para evitar deslogamentos involuntários
-ini_set('session.gc_maxlifetime', 86400);
-ini_set('session.cookie_lifetime', 86400);
+if (session_status() === PHP_SESSION_NONE) {
+    ini_set('session.gc_maxlifetime', 86400);
+    ini_set('session.cookie_lifetime', 86400);
+}
 
 // Detecção automática de ambiente (Local vs Produção na VPS Hostinger)
 $isLocal = (php_sapi_name() === 'cli' 
