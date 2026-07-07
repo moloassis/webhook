@@ -4,6 +4,7 @@
 
         let chamadosList = [];
         let filterActive = 'todos';
+        const alertasEnviados = new Set();
         let audioContext = null;
         let audioMuted = localStorage.getItem(getTenantKey('audio_habilitado')) === 'false';
         let audioVolume = parseInt(localStorage.getItem(getTenantKey('audio_volume')) || '80', 10);
@@ -340,8 +341,12 @@
                 try {
                     const data = JSON.parse(event.data);
                     
-                    // Valida se o objeto não é nulo/heartbeat
-                    if (data && data.id) {
+                    if (data && data.action === 'resolve') {
+                        // Remove o card da lista local
+                        chamadosList = chamadosList.filter(item => item.id !== data.id);
+                        renderizarAlertas();
+                        atualizarContadores();
+                    } else if (data && data.id) {
                         adicionarChamado(data);
                     }
                 } catch (e) {
@@ -552,48 +557,91 @@
 
             emptyState.style.display = 'none';
 
-            // Montar cada card dinamicamente
-            itensFiltrados.forEach(item => {
-                const estilo = obterEstiloEvento(item);
-                const card = document.createElement('div');
-                card.className = `alert-card ${estilo.classe}`;
-                
-                // Obter dados dinâmicos do estilo
-                const icon = estilo.icon;
-                const labelTipo = estilo.label;
-
-                // Formatar hora
-                const horaFormatada = new Date(item.criado_em.replace(/-/g, "/")).toLocaleTimeString('pt-BR', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                });
-
-                let actionsHTML = '';
-                if (item.session_id) {
-                    const labelText = item.session_id.startsWith('contact:') ? 'Ver Contato 👤' : 'Atender 💬';
-                    actionsHTML += `<a href="${obterUrlChat(item.session_id)}" target="_blank" class="btn-action btn-open-chat" onclick="resolverChamadoSilencioso(${item.id}, this)">${labelText}</a>`;
-                }
-                actionsHTML += `<button class="btn-action btn-resolve" onclick="resolverChamado(${item.id}, this)">Dispensar</button>`;
-
-                card.innerHTML = `
-                    <div class="card-details">
-                        <div class="card-icon">${icon}</div>
-                        <div class="card-info">
-                            <div class="card-header-row">
-                                <span class="client-name">${item.nome_cliente || 'N/A'}</span>
-                                <span class="badge-type">${labelTipo}</span>
-                                <span class="card-time">🕒 ${horaFormatada}</span>
-                            </div>
-                            <p class="card-msg">${item.mensagem || 'Sem mensagem descritiva.'}</p>
-                        </div>
-                    </div>
-                    <div class="card-actions">
-                        ${actionsHTML}
-                    </div>
-                `;
-                alertsGrid.appendChild(card);
-            });
+             // Montar cada card dinamicamente
+             itensFiltrados.forEach(item => {
+                 const estilo = obterEstiloEvento(item);
+                 const card = document.createElement('div');
+                 card.className = `alert-card ${estilo.classe}`;
+                 
+                 // Obter dados dinâmicos do estilo
+                 const icon = estilo.icon;
+                 const labelTipo = estilo.label;
+ 
+                 // Formatar hora
+                 const horaFormatada = new Date(item.criado_em.replace(/-/g, "/")).toLocaleTimeString('pt-BR', {
+                     hour: '2-digit',
+                     minute: '2-digit',
+                     second: '2-digit'
+                 });
+ 
+                 // Calcula tempo de espera em minutos para atendimento humano
+                 const criadoEmDate = new Date(item.criado_em.replace(/-/g, "/"));
+                 const diffSeconds = Math.floor((new Date() - criadoEmDate) / 1000);
+                 const diffMinutes = Math.floor(diffSeconds / 60);
+ 
+                 let waitingHTML = '';
+                 if (estilo.classe === 'type-atendimento_humano') {
+                     if (diffMinutes >= 5) {
+                         waitingHTML = `<span class="waiting-badge warning" style="animation: pulse-border 1.5s infinite; background: rgba(255, 71, 87, 0.15); color: #ff4757; font-weight: 600; font-size: 0.72rem; padding: 0.2rem 0.5rem; border-radius: 6px; border: 1px solid rgba(255, 71, 87, 0.3); display: inline-flex; align-items: center; gap: 4px;">⚠️ SEM RESPOSTA HÁ ${diffMinutes}m</span>`;
+                         
+                         // Envia notificação nativa uma única vez por chamado ao bater 5 minutos
+                         if (!alertasEnviados.has(item.id)) {
+                             alertasEnviados.add(item.id);
+                             
+                             // Dispara som de alerta urgente imediatamente
+                             tocarAlertaSonoro('atendimento_humano');
+                             
+                             // Dispara notificação do navegador se permitido
+                             if (Notification.permission === 'granted') {
+                                 try {
+                                     new Notification("🚨 Alerta de Espera - Central de Alertas", {
+                                         body: `O cliente "${item.nome_cliente || 'Desconhecido'}" está aguardando atendimento humano há mais de 5 minutos!`,
+                                         icon: 'assets/img/icon_192.png'
+                                     });
+                                 } catch (err) {
+                                     console.error("Erro ao disparar notificação de mesa:", err);
+                                 }
+                             }
+                             
+                             // Envia o alerta push para os administradores da empresa via backend
+                             fetch('alerta_atraso.php?id=' + item.id, { method: 'POST' })
+                                 .then(res => res.json())
+                                 .then(resData => {
+                                     console.log('Alerta de atraso enviado via push:', resData);
+                                 })
+                                 .catch(err => console.error('Erro ao enviar alerta de atraso push:', err));
+                         }
+                     } else {
+                         waitingHTML = `<span class="waiting-badge" style="background: rgba(30, 144, 255, 0.1); color: var(--color-default); font-weight: 500; font-size: 0.72rem; padding: 0.2rem 0.5rem; border-radius: 6px; border: 1px solid rgba(30, 144, 255, 0.2); display: inline-flex; align-items: center; gap: 4px;">⏱️ Esperando há ${diffMinutes}m</span>`;
+                     }
+                 }
+ 
+                 let actionsHTML = '';
+                 if (item.session_id) {
+                     const labelText = item.session_id.startsWith('contact:') ? 'Ver Contato 👤' : 'Atender 💬';
+                     actionsHTML += `<a href="${obterUrlChat(item.session_id)}" target="_blank" class="btn-action btn-open-chat" onclick="resolverChamadoSilencioso(${item.id}, this)">${labelText}</a>`;
+                 }
+                 actionsHTML += `<button class="btn-action btn-resolve" onclick="resolverChamado(${item.id}, this)">Dispensar</button>`;
+ 
+                 card.innerHTML = `
+                     <div class="card-details">
+                         <div class="card-icon">${icon}</div>
+                         <div class="card-info">
+                             <div class="card-header-row">
+                                 <span class="client-name">${item.nome_cliente || 'N/A'}</span>
+                                 <span class="badge-type">${labelTipo}</span>
+                                 ${waitingHTML}
+                                 <span class="card-time">🕒 ${horaFormatada}</span>
+                             </div>
+                             <p class="card-msg">${item.mensagem || 'Sem mensagem descritiva.'}</p>
+                         </div>
+                     </div>
+                     <div class="card-actions">
+                         ${actionsHTML}
+                     </div>
+                 `;
+                 alertsGrid.appendChild(card);
+             });
 
             // Gerencia a reprodução repetitiva da sirene para chamados urgentes ativos
             gerenciarAlertasSonorosUrgentes();
@@ -1042,6 +1090,9 @@
             if (btnRefreshHistory) {
                 btnRefreshHistory.addEventListener('click', carregarHistorico);
             }
+
+            // Atualiza os contadores de tempo e alertas de 5 minutos a cada 10 segundos
+            setInterval(renderizarAlertas, 10000);
 
             // 5. Registra o Service Worker do PWA
             if ('serviceWorker' in navigator) {

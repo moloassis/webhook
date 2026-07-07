@@ -36,12 +36,33 @@ if ($id <= 0) {
 try {
     $db = obterConexao();
     
+    // Busca os detalhes do chamado antes de dispensá-lo para a notificação
+    $stmtSelect = $db->prepare("SELECT nome_cliente, tipo FROM chamados WHERE id = :id AND empresa_id = :empresa_id AND status = 'pendente'");
+    $stmtSelect->execute([':id' => $id, ':empresa_id' => $empresaId]);
+    $chamado = $stmtSelect->fetch();
+    
+    if (!$chamado) {
+        http_response_code(404);
+        echo json_encode(['sucesso' => false, 'mensagem' => 'Chamado não encontrado ou já dispensado.']);
+        exit;
+    }
+    
     // Atualiza o chamado no banco para 'resolvido' filtrando pelo empresa_id do tenant logado
     $stmt = $db->prepare("UPDATE chamados SET status = 'resolvido' WHERE id = :id AND empresa_id = :empresa_id");
     $stmt->execute([
         ':id' => $id,
         ':empresa_id' => $empresaId
     ]);
+    
+    // Envia o alerta push para os administradores da empresa informando quem dispensou
+    $usuarioNome = $_SESSION['usuario_nome'] ?? 'Operador';
+    $clienteNome = $chamado['nome_cliente'] ?: 'Desconhecido';
+    $horaDispensada = date('H:i');
+    
+    $titulo = "🚪 Chamado Dispensado/Atendido";
+    $mensagemAlert = "O usuário {$usuarioNome} dispensou o alerta de \"{$clienteNome}\" às {$horaDispensada}.";
+    
+    enviarPushNotificacaoCustom($titulo, $mensagemAlert, './', $empresaId);
     
     echo json_encode([
         'sucesso' => true, 

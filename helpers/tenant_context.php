@@ -117,3 +117,82 @@ function inicializarContextoTenant(string $slug): array
     // Retorna as configurações do tenant
     return $tenant;
 }
+
+/**
+ * Envia uma notificação push customizada para todos os atendentes inscritos de uma empresa.
+ */
+function enviarPushNotificacaoCustom(string $titulo, string $mensagemPush, string $urlRedirect, int $empresaId): void
+{
+    if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
+        require_once __DIR__ . '/../vendor/autoload.php';
+    }
+    
+    try {
+        $db = obterConexao();
+        // Carrega todas as inscrições PWA dos usuários desta empresa
+        $stmt = $db->prepare("SELECT p.id, p.endpoint, p.keys_p256dh, p.keys_auth 
+                               FROM pwa_subscriptions p
+                               JOIN usuarios u ON p.usuario_id = u.id
+                               WHERE u.empresa_id = :empresa_id");
+        $stmt->execute([':empresa_id' => $empresaId]);
+        $inscricoes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        if (empty($inscricoes)) {
+            return;
+        }
+        
+        $auth = [
+            'VAPID' => [
+                'subject' => VAPID_SUBJECT,
+                'publicKey' => VAPID_PUBLIC_KEY,
+                'privateKey' => VAPID_PRIVATE_KEY,
+            ],
+        ];
+
+        $webPush = new \Minishlink\WebPush\WebPush($auth);
+        
+        foreach ($inscricoes as $ins) {
+            $webPush->queueNotification(
+                \Minishlink\WebPush\Subscription::create([
+                    'endpoint' => $ins['endpoint'],
+                    'publicKey' => $ins['keys_p256dh'],
+                    'authToken' => $ins['keys_auth'],
+                ]),
+                json_encode([
+                    'titulo' => $titulo,
+                    'mensagem' => $mensagemPush,
+                    'url' => $urlRedirect
+                ], JSON_UNESCAPED_UNICODE)
+            );
+        }
+
+        $idsParaRemover = [];
+        foreach ($webPush->flush() as $report) {
+            if (!$report->isSuccess()) {
+                $response = $report->getResponse();
+                $statusCode = $response ? $response->getStatusCode() : null;
+                if ($statusCode === 410 || $statusCode === 404) {
+                    $endpointUrl = $report->getRequest()->getUri()->__toString();
+                    foreach ($inscricoes as $ins) {
+                        if ($ins['endpoint'] === $endpointUrl) {
+                            $idsParaRemover[] = $ins['id'];
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!empty($idsParaRemover)) {
+            $placeholders = implode(',', array_fill(0, count($idsParaRemover), '?'));
+            $sqlDelete = "DELETE FROM pwa_subscriptions WHERE id IN ($placeholders)";
+            $stmtDel = $db->prepare($sqlDelete);
+            $stmtDel->execute($idsParaRemover);
+            registrarErro("Inscrições de Web Push inativas removidas em lote: " . implode(', ', $idsParaRemover));
+        }
+
+    } catch (Exception $e) {
+        registrarErro("Falha ao processar Web Push Customizado: " . $e->getMessage());
+    }
+}
+

@@ -160,6 +160,20 @@ if ($eventType) {
             $text = $dados['content']['text'] ?? '';
             $mensagem = "IA ({$origin}) enviou mensagem para {$to}: \"{$text}\"";
             $criarChamadoAtivo = false; // Apenas informativo
+
+            // Se uma resposta foi enviada ao cliente, encerra os chamados de atendimento humano para este contato
+            if (!empty($sessionId)) {
+                try {
+                    $db = obterConexao();
+                    $stmtUpdate = $db->prepare("UPDATE chamados SET status = 'resolvido' WHERE session_id = :session_id AND status = 'pendente' AND empresa_id = :empresa_id");
+                    $stmtUpdate->execute([
+                        ':session_id' => $sessionId,
+                        ':empresa_id' => (int)$empresaId
+                    ]);
+                } catch (Exception $e) {
+                    registrarErro("Erro ao fechar chamado por MESSAGE_SENT: " . $e->getMessage());
+                }
+            }
             break;
 
         case 'MESSAGE_RECEIVED':

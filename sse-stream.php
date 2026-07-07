@@ -70,6 +70,17 @@ if (session_status() === PHP_SESSION_ACTIVE) {
     session_write_close();
 }
 
+// Inicializa a lista de IDs pendentes enviados localmente para controlar encerramentos em tempo real
+$sentPendingIds = [];
+try {
+    $stmtInit = $db->prepare("SELECT id FROM chamados WHERE status = 'pendente' AND empresa_id = :empresa_id");
+    $stmtInit->execute([':empresa_id' => $empresaId]);
+    $sentPendingIds = $stmtInit->fetchAll(PDO::FETCH_COLUMN);
+    $sentPendingIds = array_map('intval', $sentPendingIds);
+} catch (Exception $e) {
+    registrarErro("Erro ao inicializar lista de pendentes no SSE: " . $e->getMessage());
+}
+
 // Loop infinito de transmissão em tempo real
 while (true) {
     // Heartbeat para verificar se o cliente ainda está conectado
@@ -86,32 +97,38 @@ while (true) {
     }
 
     try {
-        // 4. Buscar novos chamados pendentes deste tenant (empresa_id)
+        // 4. Buscar chamados pendentes deste tenant (empresa_id)
         $sql = "SELECT id, nome_cliente, tipo, mensagem, session_id, criado_em 
                 FROM chamados 
-                WHERE status = 'pendente' AND id > :last_id AND empresa_id = :empresa_id 
+                WHERE status = 'pendente' AND empresa_id = :empresa_id 
                 ORDER BY id ASC";
         $stmt = $db->prepare($sql);
-        $stmt->execute([
-            ':last_id' => $lastId,
-            ':empresa_id' => $empresaId
-        ]);
-        $novosChamados = $stmt->fetchAll();
+        $stmt->execute([':empresa_id' => $empresaId]);
+        $currentPending = $stmt->fetchAll();
+        
+        $currentPendingIds = array_map(function($c) { return (int)$c['id']; }, $currentPending);
 
-        if (!empty($novosChamados)) {
-            foreach ($novosChamados as $chamado) {
-                // Formato padrão SSE: "data: <json>\n\n"
-                echo "data: " . json_encode($chamado, JSON_UNESCAPED_UNICODE) . "\n\n";
-
-                // Atualiza o cursor local para o ID que acabou de ser enviado
-                $lastId = (int)$chamado['id'];
-            }
-
-            if (ob_get_length()) {
-                ob_flush();
-            }
-            flush();
+        // Detecta chamados resolvidos (estavam na lista anterior e não estão mais no banco como pendentes)
+        $resolvedIds = array_diff($sentPendingIds, $currentPendingIds);
+        foreach ($resolvedIds as $resId) {
+            echo "data: " . json_encode(['action' => 'resolve', 'id' => $resId], JSON_UNESCAPED_UNICODE) . "\n\n";
+            // Remove da lista local
+            $sentPendingIds = array_filter($sentPendingIds, function($id) use ($resId) { return $id !== $resId; });
         }
+
+        // Envia novos chamados pendentes
+        foreach ($currentPending as $chamado) {
+            $cId = (int)$chamado['id'];
+            if (!in_array($cId, $sentPendingIds)) {
+                echo "data: " . json_encode($chamado, JSON_UNESCAPED_UNICODE) . "\n\n";
+                $sentPendingIds[] = $cId;
+            }
+        }
+
+        if (ob_get_length()) {
+            ob_flush();
+        }
+        flush();
 
     } catch (PDOException $e) {
         registrarErro("Erro de banco de dados no loop SSE para empresa #{$empresaId}: " . $e->getMessage());
