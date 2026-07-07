@@ -103,6 +103,43 @@ if (isset($_GET['render_library'])) {
     exit;
 }
 
+// 0.1 Renderizar apenas a lista de membros via AJAX GET
+if (isset($_GET['render_users'])) {
+    try {
+        $db = obterConexao();
+        $stmtUsers = $db->prepare("SELECT id, nome, email, role FROM usuarios WHERE empresa_id = :empresa_id ORDER BY role, nome");
+        $stmtUsers->execute([':empresa_id' => $empresaId]);
+        $usuariosTenant = $stmtUsers->fetchAll();
+    } catch (Exception $e) {
+        $usuariosTenant = [];
+    }
+    
+    foreach ($usuariosTenant as $u): ?>
+        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.6rem 0.8rem; display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
+            <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">
+                <span class="label-text" style="font-weight: 600; color: var(--text-primary); font-size: 0.85rem; display: block; overflow: hidden; text-overflow: ellipsis;">
+                    <?= htmlspecialchars($u['nome']) ?>
+                </span>
+                <span class="label-text" style="font-size: 0.72rem; color: var(--text-secondary); display: block;">
+                    <?= htmlspecialchars($u['email']) ?> • <strong style="text-transform: uppercase; color: var(--color-default); font-size: 0.65rem;"><?= htmlspecialchars($u['role']) ?></strong>
+                </span>
+            </div>
+            <?php if ($u['id'] !== (int)$_SESSION['usuario_id']): ?>
+                <form action="<?php echo htmlspecialchars($_SERVER['REQUEST_URI'], ENT_QUOTES, 'UTF-8'); ?>" method="POST" style="margin: 0;" onsubmit="event.preventDefault(); confirmarExcluirUsuario(this, <?= $u['id'] ?>, '<?= htmlspecialchars($u['nome'], ENT_QUOTES, 'UTF-8') ?>')">
+                    <input type="hidden" name="action" value="delete_user">
+                    <input type="hidden" name="usuario_id" value="<?= $u['id'] ?>">
+                    <button type="submit" class="btn-inspect" style="font-size: 0.7rem; padding: 0.25rem 0.5rem; border-radius: 6px; background: rgba(255, 71, 87, 0.15); border-color: rgba(255, 71, 87, 0.3); color: var(--color-atendimento);">
+                        Excluir
+                    </button>
+                </form>
+            <?php else: ?>
+                <span class="badge" style="font-size: 0.65rem; border-color: rgba(255,255,255,0.1); color: var(--text-secondary);">Você</span>
+            <?php endif; ?>
+        </div>
+    <?php endforeach;
+    exit;
+}
+
 $sucessoMsg = isset($_GET['success']) ? $_GET['success'] : '';
 $erroMsg = isset($_GET['error']) ? $_GET['error'] : '';
 
@@ -352,11 +389,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
         
+        // Recarrega as configurações da marca para retornar o estado atualizado no AJAX
+        $updatedConfig = carregarTenantPorSlug($_SESSION['tenant_ativo_slug']);
+        
         echo json_encode([
             'success' => !empty($successMsg),
             'message' => $successMsg ?: $erroMsg,
             'limite_logs' => (int) obterConfiguracao('limite_logs', 100, $empresaId),
-            'som_ativo' => obterConfiguracao('audio_alerta', 'assets/audio/notificacao.mp3', $empresaId)
+            'som_ativo' => obterConfiguracao('audio_alerta', 'assets/audio/notificacao.mp3', $empresaId),
+            'marca' => [
+                'cor_primaria' => $updatedConfig['cor_primaria'] ?? '#2ed573',
+                'cor_secundaria' => $updatedConfig['cor_secundaria'] ?? '#70a1ff',
+                'modo_visualizacao' => $updatedConfig['modo_visualizacao'] ?? 'dark',
+                'exibicao_logo' => $updatedConfig['exibicao_logo'] ?? 'logo_nome',
+                'logo_path' => $updatedConfig['logo_path'] ?? ''
+            ]
         ]);
         exit;
     }
