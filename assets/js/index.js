@@ -482,12 +482,26 @@
             chamadosList = chamadosList.filter(item => item.id !== id);
             renderizarAlertas();
             atualizarContadores();
-
+ 
             // Dispara para o banco de dados em segundo plano
             fetch('resolver.php?id=' + id, { method: 'POST' })
                 .catch(err => console.error("Erro ao dispensar em background:", err));
         }
 
+        // Minimiza o modal sem dispensar o chamado (muda status para 'aguardando' e mantém o cronômetro ativo)
+        function fecharModalUrgenteTemporariamente(id) {
+            const cham = chamadosList.find(item => item.id === id);
+            if (cham) {
+                cham.status = 'aguardando';
+            }
+            renderizarAlertas();
+            atualizarContadores();
+
+            // Atualiza no banco de dados em segundo plano definindo status como 'aguardando'
+            fetch('resolver.php?id=' + id + '&status=aguardando', { method: 'POST' })
+                .catch(err => console.error("Erro ao fechar modal temporariamente:", err));
+        }
+ 
         // Renderiza o grid de alertas baseando-se no filtro ativo
         function renderizarAlertas() {
             const limiteMinutos = (window.SYSTEM_CONFIG && window.SYSTEM_CONFIG.tempoLimiteEspera) ? parseInt(window.SYSTEM_CONFIG.tempoLimiteEspera, 10) : 5;
@@ -516,10 +530,10 @@
                  chamadoUrgente = chamadoAtrasado;
                  isAtrasado = true;
              } else {
-                 // 2. Se não houver atrasado, busca o chamado de atendimento humano normal (recente) para exibir
+                 // 2. Se não houver atrasado, busca o chamado de atendimento humano que ainda está 'pendente' (não visto pelo operador)
                  chamadoUrgente = chamadosList.find(c => {
                      const estilo = obterEstiloEvento(c);
-                     return estilo.classe === 'type-atendimento_humano';
+                     return estilo.classe === 'type-atendimento_humano' && c.status === 'pendente';
                  });
              }
  
@@ -551,7 +565,11 @@
                  
                  const btnUrgentResolve = document.getElementById('btnUrgentResolve');
                  btnUrgentResolve.onclick = function() {
-                     resolverChamadoUrgente(chamadoUrgente.id, btnUrgentResolve);
+                     if (isAtrasado) {
+                         resolverChamadoUrgente(chamadoUrgente.id, btnUrgentResolve);
+                     } else {
+                         fecharModalUrgenteTemporariamente(chamadoUrgente.id);
+                     }
                  };
  
                  const btnUrgentChat = document.getElementById('btnUrgentChat');
@@ -674,7 +692,13 @@
                      const labelText = item.session_id.startsWith('contact:') ? 'Ver Contato 👤' : 'Atender 💬';
                      actionsHTML += `<a href="${obterUrlChat(item.session_id)}" target="_blank" class="btn-action btn-open-chat" onclick="resolverChamadoSilencioso(${item.id}, this)">${labelText}</a>`;
                  }
-                 actionsHTML += `<button class="btn-action btn-resolve" onclick="resolverChamado(${item.id}, this)">Dispensar</button>`;
+
+                 // Regra de segurança: se o chamado está no status 'aguardando', apenas administradores podem dispensá-lo manualmente
+                 const userRole = (window.SYSTEM_CONFIG && window.SYSTEM_CONFIG.userRole) ? window.SYSTEM_CONFIG.userRole : 'user';
+                 const isAdmin = (userRole === 'admin' || userRole === 'superadmin');
+                 if (item.status !== 'aguardando' || isAdmin) {
+                     actionsHTML += `<button class="btn-action btn-resolve" onclick="resolverChamado(${item.id}, this)">Dispensar</button>`;
+                 }
  
                  card.innerHTML = `
                      <div class="card-details">

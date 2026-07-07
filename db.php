@@ -48,6 +48,13 @@ function obterConexao(): PDO {
             } catch (Exception $e) {
                 // Silenciosamente ignora se a tabela tenants não existir ainda
             }
+
+            // Auto-migração/Self-healing para alterar ENUM para VARCHAR na tabela chamados (suporta novos status)
+            try {
+                $pdo->exec("ALTER TABLE chamados MODIFY COLUMN status VARCHAR(20) NOT NULL DEFAULT 'pendente'");
+            } catch (Exception $e) {
+                // Silenciosamente ignora se a tabela chamados não existir ainda
+            }
         } catch (PDOException $e) {
             // Registra o erro internamente com segurança
             registrarErro("Falha na conexão PDO: " . $e->getMessage(), [

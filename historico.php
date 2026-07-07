@@ -26,10 +26,10 @@ $empresaId = (int)$_SESSION['tenant_ativo_id'];
 try {
     $db = obterConexao();
     
-    // Busca apenas os chamados ainda 'pendentes' vinculados a este tenant específico
+    // Busca os chamados ativos (pendentes ou aguardando) vinculados a este tenant específico
     $sql = "SELECT id, nome_cliente, tipo, mensagem, session_id, status, criado_em 
             FROM chamados 
-            WHERE status = 'pendente' AND empresa_id = :empresa_id 
+            WHERE status IN ('pendente', 'aguardando') AND empresa_id = :empresa_id 
             ORDER BY id DESC LIMIT 50";
             
     $stmt = $db->prepare($sql);

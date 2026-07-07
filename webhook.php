@@ -165,7 +165,7 @@ if ($eventType) {
             if ($origin === 'DEFAULT' && !empty($sessionId)) {
                 try {
                     $db = obterConexao();
-                    $stmtUpdate = $db->prepare("UPDATE chamados SET status = 'resolvido' WHERE session_id = :session_id AND status = 'pendente' AND empresa_id = :empresa_id");
+                    $stmtUpdate = $db->prepare("UPDATE chamados SET status = 'resolvido' WHERE session_id = :session_id AND status IN ('pendente', 'aguardando') AND empresa_id = :empresa_id");
                     $stmtUpdate->execute([
                         ':session_id' => $sessionId,
                         ':empresa_id' => (int)$empresaId

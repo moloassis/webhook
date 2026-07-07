@@ -34,8 +34,8 @@ if ($id <= 0) {
 try {
     $db = obterConexao();
     
-    // Busca informações do chamado para confirmar se pertence à empresa e está pendente
-    $stmt = $db->prepare("SELECT nome_cliente, criado_em FROM chamados WHERE id = :id AND empresa_id = :empresa_id AND status = 'pendente'");
+    // Busca informações do chamado para confirmar se pertence à empresa e está ativo
+    $stmt = $db->prepare("SELECT nome_cliente, criado_em FROM chamados WHERE id = :id AND empresa_id = :empresa_id AND status IN ('pendente', 'aguardando')");
     $stmt->execute([':id' => $id, ':empresa_id' => $empresaId]);
     $chamado = $stmt->fetch();
     

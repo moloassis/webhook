@@ -70,10 +70,10 @@ if (session_status() === PHP_SESSION_ACTIVE) {
     session_write_close();
 }
 
-// Inicializa a lista de IDs pendentes enviados localmente para controlar encerramentos em tempo real
+// Inicializa a lista de IDs pendentes/aguardando enviados localmente para controlar encerramentos em tempo real
 $sentPendingIds = [];
 try {
-    $stmtInit = $db->prepare("SELECT id FROM chamados WHERE status = 'pendente' AND empresa_id = :empresa_id");
+    $stmtInit = $db->prepare("SELECT id FROM chamados WHERE status IN ('pendente', 'aguardando') AND empresa_id = :empresa_id");
     $stmtInit->execute([':empresa_id' => $empresaId]);
     $sentPendingIds = $stmtInit->fetchAll(PDO::FETCH_COLUMN);
     $sentPendingIds = array_map('intval', $sentPendingIds);
@@ -97,10 +97,10 @@ while (true) {
     }
 
     try {
-        // 4. Buscar chamados pendentes deste tenant (empresa_id)
-        $sql = "SELECT id, nome_cliente, tipo, mensagem, session_id, criado_em 
+        // 4. Buscar chamados ativos (pendentes ou aguardando) deste tenant (empresa_id)
+        $sql = "SELECT id, nome_cliente, tipo, mensagem, session_id, status, criado_em 
                 FROM chamados 
-                WHERE status = 'pendente' AND empresa_id = :empresa_id 
+                WHERE status IN ('pendente', 'aguardando') AND empresa_id = :empresa_id 
                 ORDER BY id ASC";
         $stmt = $db->prepare($sql);
         $stmt->execute([':empresa_id' => $empresaId]);

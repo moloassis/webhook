@@ -36,37 +36,54 @@ if ($id <= 0) {
 try {
     $db = obterConexao();
     
-    // Busca os detalhes do chamado antes de dispensá-lo para a notificação
-    $stmtSelect = $db->prepare("SELECT nome_cliente, tipo FROM chamados WHERE id = :id AND empresa_id = :empresa_id AND status = 'pendente'");
+    // Busca os detalhes do chamado antes de alterá-lo (suporta pendente ou aguardando)
+    $stmtSelect = $db->prepare("SELECT nome_cliente, tipo, status FROM chamados WHERE id = :id AND empresa_id = :empresa_id AND status IN ('pendente', 'aguardando')");
     $stmtSelect->execute([':id' => $id, ':empresa_id' => $empresaId]);
     $chamado = $stmtSelect->fetch();
     
     if (!$chamado) {
         http_response_code(404);
-        echo json_encode(['sucesso' => false, 'mensagem' => 'Chamado não encontrado ou já dispensado.']);
+        echo json_encode(['sucesso' => false, 'mensagem' => 'Chamado não encontrado ou já resolvido.']);
         exit;
     }
     
-    // Atualiza o chamado no banco para 'resolvido' filtrando pelo empresa_id do tenant logado
-    $stmt = $db->prepare("UPDATE chamados SET status = 'resolvido' WHERE id = :id AND empresa_id = :empresa_id");
+    // Lê o status de destino desejado (default: resolvido)
+    $status = isset($_GET['status']) ? trim($_GET['status']) : 'resolvido';
+    if (!in_array($status, ['aguardando', 'resolvido'])) {
+        $status = 'resolvido';
+    }
+    
+    // Regra de segurança: se o chamado já está 'aguardando', apenas admins/superadmins podem dispensar/resolver manualmente
+    $usuarioRole = $_SESSION['usuario_role'] ?? 'user';
+    if ($chamado['status'] === 'aguardando' && $status === 'resolvido' && $usuarioRole !== 'admin' && $usuarioRole !== 'superadmin') {
+        http_response_code(403);
+        echo json_encode(['sucesso' => false, 'mensagem' => 'Apenas administradores podem dispensar chamados em espera.']);
+        exit;
+    }
+    
+    // Atualiza o chamado no banco filtrando pelo empresa_id do tenant logado
+    $stmt = $db->prepare("UPDATE chamados SET status = :status WHERE id = :id AND empresa_id = :empresa_id");
     $stmt->execute([
+        ':status' => $status,
         ':id' => $id,
         ':empresa_id' => $empresaId
     ]);
     
-    // Envia o alerta push para os administradores da empresa informando quem dispensou
-    $usuarioNome = $_SESSION['usuario_nome'] ?? 'Operador';
-    $clienteNome = $chamado['nome_cliente'] ?: 'Desconhecido';
-    $horaDispensada = date('H:i');
-    
-    $titulo = "🚪 Chamado Dispensado/Atendido";
-    $mensagemAlert = "O usuário {$usuarioNome} dispensou o alerta de \"{$clienteNome}\" às {$horaDispensada}.";
-    
-    enviarPushNotificacaoCustom($titulo, $mensagemAlert, './', $empresaId);
+    // Só envia o alerta push de finalização aos demais atendentes se for resolvido de fato
+    if ($status === 'resolvido') {
+        $usuarioNome = $_SESSION['usuario_nome'] ?? 'Operador';
+        $clienteNome = $chamado['nome_cliente'] ?: 'Desconhecido';
+        $horaDispensada = date('H:i');
+        
+        $titulo = "🚪 Chamado Dispensado/Atendido";
+        $mensagemAlert = "O usuário {$usuarioNome} dispensou o alerta de \"{$clienteNome}\" às {$horaDispensada}.";
+        
+        enviarPushNotificacaoCustom($titulo, $mensagemAlert, './', $empresaId);
+    }
     
     echo json_encode([
         'sucesso' => true, 
-        'mensagem' => 'Chamado dispensado e retirado da fila.'
+        'mensagem' => $status === 'aguardando' ? 'Chamado minimizado (aguardando suporte).' : 'Chamado finalizado e removido da fila.'
     ], JSON_UNESCAPED_UNICODE);
 } catch (Exception $e) {
     registrarErro("Erro ao dispensar chamado #{$id} para empresa #{$empresaId}: " . $e->getMessage());
