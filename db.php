@@ -28,6 +28,16 @@ function obterConexao(): PDO {
             
             // Configura o fuso horário da sessão do banco de dados para UTC-3 (Brasil)
             $pdo->exec("SET time_zone = '-03:00'");
+
+            // Auto-migração/Self-healing para o campo exibicao_logo na tabela tenants
+            try {
+                $q = $pdo->query("SHOW COLUMNS FROM tenants LIKE 'exibicao_logo'");
+                if ($q && $q->rowCount() === 0) {
+                    $pdo->exec("ALTER TABLE tenants ADD COLUMN exibicao_logo VARCHAR(20) DEFAULT 'logo_nome' AFTER logo_path");
+                }
+            } catch (Exception $e) {
+                // Silenciosamente ignora se a tabela tenants não existir ainda
+            }
         } catch (PDOException $e) {
             // Registra o erro internamente com segurança
             registrarErro("Falha na conexão PDO: " . $e->getMessage(), [

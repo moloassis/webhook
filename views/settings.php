@@ -134,6 +134,16 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
                         </select>
                     </div>
 
+                    <!-- Exibição do Logo/Nome no Cabeçalho -->
+                    <div class="form-group" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <label class="label-text" for="exibicao_logo" style="font-size: 0.85rem;">Exibição no Cabeçalho</label>
+                        <select id="exibicao_logo" name="exibicao_logo" class="form-control" style="width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.6rem; color: var(--text-primary); outline: none;">
+                            <option value="logo_nome" <?= (($tenantConfig['exibicao_logo'] ?? 'logo_nome') === 'logo_nome') ? 'selected' : '' ?>>Logotipo + Nome da Empresa</option>
+                            <option value="logo" <?= (($tenantConfig['exibicao_logo'] ?? 'logo_nome') === 'logo') ? 'selected' : '' ?>>Somente o Logotipo</option>
+                            <option value="nome" <?= (($tenantConfig['exibicao_logo'] ?? 'logo_nome') === 'nome') ? 'selected' : '' ?>>Somente o Nome da Empresa</option>
+                        </select>
+                    </div>
+
                     <!-- Logo File Upload -->
                     <div class="form-group" style="display: flex; flex-direction: column; gap: 0.5rem;">
                         <label class="label-text" for="logo_file" style="font-size: 0.85rem;">Logotipo da Empresa</label>
@@ -141,11 +151,29 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
                         <span class="label-text" style="font-size: 0.72rem; color: var(--text-secondary);">
                             Formatos sugeridos: PNG transparente ou SVG (max: 2MB).
                         </span>
+                        
+                        <?php if (!empty($tenantConfig['logo_path']) && file_exists(__DIR__ . '/../' . $tenantConfig['logo_path'])): ?>
+                            <!-- Exibe logo atual e botão de remoção -->
+                            <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); padding: 0.6rem; border-radius: 8px; margin-top: 0.5rem;">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <img src="<?= htmlspecialchars($tenantConfig['logo_path']) ?>" style="max-height: 28px; max-width: 80px; object-fit: contain; border-radius: 4px;">
+                                    <span class="label-text" style="font-size: 0.72rem; color: var(--text-secondary);">Logo ativa</span>
+                                </div>
+                                <button type="button" onclick="confirmarRemoverLogo()" class="btn-inspect" style="font-size: 0.7rem; padding: 0.25rem 0.5rem; border-radius: 6px; background: rgba(255, 71, 87, 0.15); border-color: rgba(255, 71, 87, 0.3); color: #ff4757; cursor: pointer;">
+                                    Excluir Logo 🗑️
+                                </button>
+                            </div>
+                        <?php endif; ?>
                     </div>
 
                     <button type="submit" class="btn-premium" style="width: 100%; margin: 0; padding: 0.7rem; font-weight: 600;">
                         Atualizar Identidade Visual
                     </button>
+                </form>
+
+                <!-- Formulário oculto para excluir logotipo -->
+                <form id="deleteLogoForm" action="<?php echo htmlspecialchars($_SERVER['REQUEST_URI'], ENT_QUOTES, 'UTF-8'); ?>" method="POST" style="display:none;">
+                    <input type="hidden" name="action" value="delete_logo">
                 </form>
             </div>
             <?php endif; ?>
@@ -244,6 +272,15 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
 </div>
 
 <script>
+    function confirmarRemoverLogo() {
+        if (confirm("Deseja realmente remover o logotipo personalizado?")) {
+            const form = document.getElementById("deleteLogoForm");
+            if (form) {
+                form.dispatchEvent(new Event('submit', { cancelable: true }));
+            }
+        }
+    }
+
     function updateFileNameLabel(input) {
         const label = document.getElementById('file_selected_name');
         if (input.files && input.files.length > 0) {
@@ -349,7 +386,7 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
                 const actionVal = actionInput.value;
                 
                 // Recarrega a página inteira em ações críticas de marca/estrutura para aplicar as mudanças visuais
-                if (actionVal === 'save_whitelabel' || actionVal === 'delete_user' || actionVal === 'add_user') {
+                if (actionVal === 'save_whitelabel' || actionVal === 'delete_logo' || actionVal === 'delete_user' || actionVal === 'add_user') {
                     setTimeout(() => window.location.reload(), 1200);
                     return;
                 }

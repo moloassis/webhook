@@ -11,6 +11,7 @@ $corPrimaria = $tenantConfig['cor_primaria'] ?? '#1e90ff';
 $corSecundaria = $tenantConfig['cor_secundaria'] ?? '#ffa502';
 $modoVisualizacao = $tenantConfig['modo_visualizacao'] ?? 'dark';
 $logoPath = $tenantConfig['logo_path'] ?? '';
+$exibicaoLogo = $tenantConfig['exibicao_logo'] ?? 'logo_nome';
 
 // Função auxiliar para converter Hex em RGBA para os glows das bordas/fundo
 function hex2rgba($hex, $alpha = 0.4)
@@ -164,14 +165,20 @@ $corSecundariaGlow = hex2rgba($corSecundaria, 0.4);
         <a href="t/<?php echo $tenantSlug; ?>/dashboard"
             style="text-decoration: none; display: flex; align-items: center; gap: 0.8rem;">
             <div class="logo-area">
-                <?php if ($logoPath && file_exists(__DIR__ . '/../' . $logoPath)): ?>
-                    <img src="<?php echo htmlspecialchars($logoPath, ENT_QUOTES, 'UTF-8'); ?>"
-                        alt="<?php echo htmlspecialchars($tenantNome, ENT_QUOTES, 'UTF-8'); ?>"
-                        style="max-height: 38px; border-radius: 6px; object-fit: contain;">
-                <?php else: ?>
-                    <div class="logo-dot"></div>
+                <?php 
+                if ($exibicaoLogo === 'logo_nome' || $exibicaoLogo === 'logo'): 
+                    if ($logoPath && file_exists(__DIR__ . '/../' . $logoPath)): ?>
+                        <img src="<?php echo htmlspecialchars($logoPath, ENT_QUOTES, 'UTF-8'); ?>"
+                            alt="<?php echo htmlspecialchars($tenantNome, ENT_QUOTES, 'UTF-8'); ?>"
+                            style="max-height: 38px; border-radius: 6px; object-fit: contain;">
+                    <?php else: ?>
+                        <div class="logo-dot"></div>
+                    <?php endif; 
+                endif; 
+
+                if ($exibicaoLogo === 'logo_nome' || $exibicaoLogo === 'nome'): ?>
+                    <h1><?php echo htmlspecialchars($tenantNome, ENT_QUOTES, 'UTF-8'); ?></h1>
                 <?php endif; ?>
-                <h1><?php echo htmlspecialchars($tenantNome, ENT_QUOTES, 'UTF-8'); ?></h1>
             </div>
         </a>
 

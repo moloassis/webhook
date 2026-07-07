@@ -207,6 +207,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $corPrimaria = isset($_POST['cor_primaria']) ? trim($_POST['cor_primaria']) : '#2ed573';
             $corSecundaria = isset($_POST['cor_secundaria']) ? trim($_POST['cor_secundaria']) : '#70a1ff';
             $modoVisualizacao = isset($_POST['modo_visualizacao']) ? trim($_POST['modo_visualizacao']) : 'dark';
+            $exibicaoLogo = isset($_POST['exibicao_logo']) ? trim($_POST['exibicao_logo']) : 'logo_nome';
 
             try {
                 $db = obterConexao();
@@ -240,17 +241,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
 
-                $stmtUpdate = $db->prepare("UPDATE tenants SET cor_primaria = :cp, cor_secundaria = :cs, modo_visualizacao = :mv WHERE id = :id");
+                $stmtUpdate = $db->prepare("UPDATE tenants SET cor_primaria = :cp, cor_secundaria = :cs, modo_visualizacao = :mv, exibicao_logo = :el WHERE id = :id");
                 $stmtUpdate->execute([
                     ':cp' => $corPrimaria,
                     ':cs' => $corSecundaria,
                     ':mv' => $modoVisualizacao,
+                    ':el' => $exibicaoLogo,
                     ':id' => $empresaId
                 ]);
 
                 $statusQuery = 'success=' . urlencode('Visual da marca atualizado com sucesso!');
             } catch (Exception $e) {
                 $statusQuery = 'error=' . urlencode('Erro ao atualizar configurações visuais: ' . $e->getMessage());
+            }
+        }
+
+        // AÇÃO: Excluir Logotipo Personalizado
+        elseif ($action === 'delete_logo') {
+            try {
+                $db = obterConexao();
+                
+                // Busca a logo atual para deletar o arquivo físico
+                $logoPath = $db->query("SELECT logo_path FROM tenants WHERE id = $empresaId")->fetchColumn();
+                if ($logoPath && file_exists(__DIR__ . '/../' . $logoPath)) {
+                    unlink(__DIR__ . '/../' . $logoPath);
+                }
+                
+                // Reseta a coluna logo_path para NULL
+                $stmtDelLogo = $db->prepare("UPDATE tenants SET logo_path = NULL WHERE id = :id");
+                $stmtDelLogo->execute([':id' => $empresaId]);
+                
+                $statusQuery = 'success=' . urlencode('Logotipo personalizado removido com sucesso!');
+            } catch (Exception $e) {
+                $statusQuery = 'error=' . urlencode('Erro ao remover logotipo: ' . $e->getMessage());
             }
         }
 
