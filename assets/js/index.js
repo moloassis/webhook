@@ -5,6 +5,7 @@
         let chamadosList = [];
         let filterActive = 'todos';
         const alertasEnviados = new Set();
+        const alertasAtrasadosMinimizadosLocais = new Set();
         
         // Calcula a diferença de relógio (skew) entre o navegador e o servidor
         let clockSkew = 0;
@@ -501,6 +502,13 @@
             fetch('resolver.php?id=' + id + '&status=aguardando', { method: 'POST' })
                 .catch(err => console.error("Erro ao fechar modal temporariamente:", err));
         }
+
+        // Minimiza localmente o modal de chamado atrasado/sem resposta nesta sessão do navegador (evita loop/trava)
+        function minimizarAlertaAtrasoLocal(id) {
+            alertasAtrasadosMinimizadosLocais.add(id);
+            renderizarAlertas();
+            atualizarContadores();
+        }
  
         // Renderiza o grid de alertas baseando-se no filtro ativo
         function renderizarAlertas() {
@@ -512,6 +520,10 @@
              let minutosEspera = 0;
  
              const chamadoAtrasado = chamadosList.find(c => {
+                 // Ignora se já minimizou localmente na sessão ativa
+                 if (alertasAtrasadosMinimizadosLocais.has(c.id)) {
+                     return false;
+                 }
                  const estilo = obterEstiloEvento(c);
                  if (estilo.classe === 'type-atendimento_humano') {
                      const criadoEmDate = new Date(c.criado_em.replace(/-/g, "/"));
@@ -566,7 +578,13 @@
                  const btnUrgentResolve = document.getElementById('btnUrgentResolve');
                  btnUrgentResolve.onclick = function() {
                      if (isAtrasado) {
-                         resolverChamadoUrgente(chamadoUrgente.id, btnUrgentResolve);
+                         const userRole = (window.SYSTEM_CONFIG && window.SYSTEM_CONFIG.userRole) ? window.SYSTEM_CONFIG.userRole : 'user';
+                         const isAdmin = (userRole === 'admin' || userRole === 'superadmin');
+                         if (isAdmin) {
+                             resolverChamadoUrgente(chamadoUrgente.id, btnUrgentResolve);
+                         } else {
+                             minimizarAlertaAtrasoLocal(chamadoUrgente.id);
+                         }
                      } else {
                          fecharModalUrgenteTemporariamente(chamadoUrgente.id);
                      }

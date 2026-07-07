@@ -270,6 +270,34 @@ if ($criarChamadoAtivo) {
     try {
         $db = obterConexao();
 
+        // Evita duplicidade: se já existe um chamado ativo (pendente ou aguardando) para este contato/sessão nesta empresa, ignora a inserção
+        if (!empty($sessionId) || !empty($nomeCliente)) {
+            $sqlCheck = "SELECT COUNT(*) FROM chamados WHERE status IN ('pendente', 'aguardando') AND empresa_id = :empresa_id AND (";
+            $paramsCheck = [':empresa_id' => $empresaId];
+            $conds = [];
+            if (!empty($sessionId)) {
+                $conds[] = "session_id = :session_id";
+                $paramsCheck[':session_id'] = $sessionId;
+            }
+            if (!empty($nomeCliente)) {
+                $conds[] = "nome_cliente = :nome_cliente";
+                $paramsCheck[':nome_cliente'] = $nomeCliente;
+            }
+            $sqlCheck .= implode(" OR ", $conds) . ")";
+            
+            $stmtCheck = $db->prepare($sqlCheck);
+            $stmtCheck->execute($paramsCheck);
+            $exists = (int)$stmtCheck->fetchColumn();
+            if ($exists > 0) {
+                // Já existe um chamado ativo para este cliente. Unifica ignorando a criação do segundo card duplicado.
+                echo json_encode([
+                    'sucesso' => true,
+                    'mensagem' => 'Chamado ativo já existente para este cliente. Evento unificado com sucesso.'
+                ], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+        }
+
         $sql = "INSERT INTO chamados (empresa_id, nome_cliente, tipo, mensagem, session_id, status, criado_em) 
                 VALUES (:empresa_id, :nome_cliente, :tipo, :mensagem, :session_id, 'pendente', NOW())";
 
