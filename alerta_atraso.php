@@ -40,13 +40,13 @@ try {
     $chamado = $stmt->fetch();
     
     if ($chamado) {
-        $criadoEm = new DateTime($chamado['criado_em']);
-        $agora = new DateTime();
-        $diff = $agora->diff($criadoEm);
+        $criadoTimestamp = strtotime($chamado['criado_em']);
+        $agoraTimestamp = time();
+        $diffSeconds = $agoraTimestamp - $criadoTimestamp;
         
         $minutos = 0;
-        if ($diff->invert === 1) {
-            $minutos = ($diff->days * 24 * 60) + ($diff->h * 60) + $diff->i;
+        if ($diffSeconds > 0) {
+            $minutos = (int) floor($diffSeconds / 60);
         }
         
         $cliente = $chamado['nome_cliente'] ?: 'Desconhecido';

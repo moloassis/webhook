@@ -490,52 +490,94 @@
 
         // Renderiza o grid de alertas baseando-se no filtro ativo
         function renderizarAlertas() {
-            // Verifica se existe algum chamado de Atendimento Humano (Urgente) para exibir em Fullscreen
-            const chamadoUrgente = chamadosList.find(c => {
-                const estilo = obterEstiloEvento(c);
-                return estilo.classe === 'type-atendimento_humano';
-            });
-
-            const modalUrgente = document.getElementById('urgentAlertModal');
-            if (chamadoUrgente) {
-                document.getElementById('urgentModalClient').textContent = chamadoUrgente.nome_cliente || 'Desconhecido';
-                document.getElementById('urgentModalMsg').textContent = chamadoUrgente.mensagem || 'Requer suporte humano.';
-                
-                const horaFormatada = new Date(chamadoUrgente.criado_em.replace(/-/g, "/")).toLocaleTimeString('pt-BR', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                });
-                document.getElementById('urgentModalTime').textContent = '\u23F3 Recebido \u00e0s ' + horaFormatada;
-                
-                const btnUrgentResolve = document.getElementById('btnUrgentResolve');
-                btnUrgentResolve.onclick = function() {
-                    resolverChamadoUrgente(chamadoUrgente.id, btnUrgentResolve);
-                };
-
-                const btnUrgentChat = document.getElementById('btnUrgentChat');
-                if (chamadoUrgente.session_id) {
-                    btnUrgentChat.href = obterUrlChat(chamadoUrgente.session_id);
-                    if (chamadoUrgente.session_id.startsWith('contact:')) {
-                        btnUrgentChat.textContent = 'VER CONTATO 👤';
-                    } else {
-                        btnUrgentChat.textContent = 'ATENDER CONVERSA 💬';
-                    }
-                    
-                    // Vincula ação de auto-dispensar silencioso ao clicar
-                    btnUrgentChat.onclick = function() {
-                        resolverChamadoUrgenteSilencioso(chamadoUrgente.id);
-                    };
-                    
-                    btnUrgentChat.style.display = 'inline-flex';
-                } else {
-                    btnUrgentChat.style.display = 'none';
-                }
-                
-                modalUrgente.style.display = 'flex';
-            } else {
-                modalUrgente.style.display = 'none';
-            }
+            const limiteMinutos = (window.SYSTEM_CONFIG && window.SYSTEM_CONFIG.tempoLimiteEspera) ? parseInt(window.SYSTEM_CONFIG.tempoLimiteEspera, 10) : 5;
+ 
+             // 1. Busca se existe algum chamado de Atendimento Humano (Urgente) atrasado/sem resposta para forçar o Modal
+             let chamadoUrgente = null;
+             let isAtrasado = false;
+             let minutosEspera = 0;
+ 
+             const chamadoAtrasado = chamadosList.find(c => {
+                 const estilo = obterEstiloEvento(c);
+                 if (estilo.classe === 'type-atendimento_humano') {
+                     const criadoEmDate = new Date(c.criado_em.replace(/-/g, "/"));
+                     const adjustedNow = new Date(new Date().getTime() - clockSkew);
+                     const diffSeconds = Math.floor((adjustedNow - criadoEmDate) / 1000);
+                     const diffMinutes = Math.floor(diffSeconds / 60);
+                     if (diffMinutes >= limiteMinutos) {
+                         minutosEspera = diffMinutes;
+                         return true;
+                     }
+                 }
+                 return false;
+             });
+ 
+             if (chamadoAtrasado) {
+                 chamadoUrgente = chamadoAtrasado;
+                 isAtrasado = true;
+             } else {
+                 // 2. Se não houver atrasado, busca o chamado de atendimento humano normal (recente) para exibir
+                 chamadoUrgente = chamadosList.find(c => {
+                     const estilo = obterEstiloEvento(c);
+                     return estilo.classe === 'type-atendimento_humano';
+                 });
+             }
+ 
+             const modalUrgente = document.getElementById('urgentAlertModal');
+             if (chamadoUrgente) {
+                 document.getElementById('urgentModalClient').textContent = chamadoUrgente.nome_cliente || 'Desconhecido';
+                 
+                 if (isAtrasado) {
+                     modalUrgente.classList.add('atrasado');
+                     document.getElementById('urgentModalTitle').textContent = '⚠️ ALERTA: CLIENTE SEM RESPOSTA!';
+                     document.getElementById('urgentModalMsg').textContent = `O cliente está aguardando atendimento há mais de ${minutosEspera} minutos sem receber resposta do suporte!`;
+                 } else {
+                     modalUrgente.classList.remove('atrasado');
+                     document.getElementById('urgentModalTitle').textContent = 'ATENDIMENTO HUMANO REQUERIDO';
+                     document.getElementById('urgentModalMsg').textContent = chamadoUrgente.mensagem || 'Requer suporte humano.';
+                 }
+                 
+                 const horaFormatada = new Date(chamadoUrgente.criado_em.replace(/-/g, "/")).toLocaleTimeString('pt-BR', {
+                     hour: '2-digit',
+                     minute: '2-digit',
+                     second: '2-digit'
+                 });
+                 
+                 if (isAtrasado) {
+                     document.getElementById('urgentModalTime').textContent = `⚠️ Aguardando resposta há ${minutosEspera} minutos (Recebido às ${horaFormatada})`;
+                 } else {
+                     document.getElementById('urgentModalTime').textContent = '⏳ Recebido às ' + horaFormatada;
+                 }
+                 
+                 const btnUrgentResolve = document.getElementById('btnUrgentResolve');
+                 btnUrgentResolve.onclick = function() {
+                     resolverChamadoUrgente(chamadoUrgente.id, btnUrgentResolve);
+                 };
+ 
+                 const btnUrgentChat = document.getElementById('btnUrgentChat');
+                 if (chamadoUrgente.session_id) {
+                     btnUrgentChat.href = obterUrlChat(chamadoUrgente.session_id);
+                     if (chamadoUrgente.session_id.startsWith('contact:')) {
+                         btnUrgentChat.textContent = 'VER CONTATO 👤';
+                     } else {
+                         btnUrgentChat.textContent = 'ATENDER CONVERSA 💬';
+                     }
+                     
+                     // Vincula ação de auto-dispensar silencioso ao clicar
+                     btnUrgentChat.onclick = function() {
+                         resolverChamadoUrgenteSilencioso(chamadoUrgente.id);
+                     };
+                     
+                     btnUrgentChat.style.display = 'inline-flex';
+                 } else {
+                     btnUrgentChat.style.display = 'none';
+                 }
+                 
+                 modalUrgente.style.display = 'flex';
+             } else {
+                 modalUrgente.style.display = 'none';
+                 modalUrgente.classList.remove('atrasado');
+             }
 
             const alertsGrid = document.getElementById('alertsGrid');
             if (!alertsGrid) {

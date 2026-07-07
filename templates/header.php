@@ -184,7 +184,7 @@ $corSecundariaGlow = hex2rgba($corSecundaria, 0.4);
         <button id="btnUrgentResolve" class="urgent-modal-close">Dispensar &times;</button>
         <div class="urgent-modal-content">
             <div class="urgent-modal-icon">🚨</div>
-            <div class="urgent-modal-title">ATENDIMENTO HUMANO REQUERIDO</div>
+            <div class="urgent-modal-title" id="urgentModalTitle">ATENDIMENTO HUMANO REQUERIDO</div>
             <div class="urgent-modal-client" id="urgentModalClient">-</div>
             <div class="urgent-modal-msg" id="urgentModalMsg">-</div>
             <a href="#" target="_blank" id="btnUrgentChat" class="urgent-modal-chat-btn">ATENDER CONVERSA 💬</a>
