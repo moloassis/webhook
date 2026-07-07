@@ -113,19 +113,49 @@ $corSecundariaGlow = hex2rgba($corSecundaria, 0.4);
                 background: rgba(0, 0, 0, 0.06) !important;
             }
 
-            .card-simulador input,
-            .card-simulador select,
-            .card-simulador textarea {
-                background: rgba(0, 0, 0, 0.02) !important;
+            .form-control,
+            input,
+            select,
+            textarea {
+                background: rgba(255, 255, 255, 0.95) !important;
                 color: var(--text-primary) !important;
-                border-color: rgba(0, 0, 0, 0.1) !important;
+                border-color: rgba(0, 0, 0, 0.15) !important;
             }
-
+            .form-control:focus,
+            input:focus,
+            select:focus,
+            textarea:focus {
+                border-color: var(--color-default) !important;
+                box-shadow: 0 0 5px rgba(30, 144, 255, 0.25) !important;
+            }
+            .form-control option,
+            select option {
+                background-color: #ffffff !important;
+                color: var(--text-primary) !important;
+            }
+            ::placeholder,
+            .form-control::placeholder,
+            input::placeholder,
+            textarea::placeholder {
+                color: #a4b0be !important;
+                opacity: 1 !important;
+            }
+            .alert-card:hover {
+                background: #ffffff !important;
+                border-color: rgba(0, 0, 0, 0.12) !important;
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06) !important;
+            }
+            #pwaInstallPanel {
+                background: linear-gradient(135deg, rgba(30, 144, 255, 0.06), rgba(255, 255, 255, 0.85)) !important;
+                border-color: rgba(30, 144, 255, 0.22) !important;
+            }
+            #pwaInstallPanel .panel-title {
+                color: #0066cc !important;
+            }
             .webhook-table th {
                 background: rgba(0, 0, 0, 0.02) !important;
                 color: var(--text-primary) !important;
             }
-
             .webhook-table tr:hover {
                 background: rgba(0, 0, 0, 0.01) !important;
             }
