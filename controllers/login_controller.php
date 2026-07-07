@@ -15,11 +15,13 @@ $erro = '';
 
 // Se já estiver logado, redireciona apropriadamente
 if (isset($_SESSION['usuario_id'])) {
+    global $baseUrl;
+    $base = isset($baseUrl) ? $baseUrl : '/';
     if ($_SESSION['usuario_role'] === 'superadmin') {
-        header("Location: superadmin");
+        header("Location: " . $base . "superadmin");
         exit;
     } elseif (isset($_SESSION['empresa_slug'])) {
-        header("Location: t/" . $_SESSION['empresa_slug'] . "/dashboard");
+        header("Location: " . $base . "t/" . $_SESSION['empresa_slug'] . "/dashboard");
         exit;
     }
 }
@@ -63,10 +65,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     exit;
                 }
 
+                global $baseUrl;
+                $base = isset($baseUrl) ? $baseUrl : '/';
                 if ($user['role'] === 'superadmin') {
-                    header("Location: superadmin");
+                    header("Location: " . $base . "superadmin");
                 } else {
-                    header("Location: t/" . $user['empresa_slug'] . "/dashboard");
+                    header("Location: " . $base . "t/" . $user['empresa_slug'] . "/dashboard");
                 }
                 exit;
             } else {

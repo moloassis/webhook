@@ -33,7 +33,7 @@ if ($route === 'logout') {
         );
     }
     session_destroy();
-    header("Location: login");
+    header("Location: " . $baseUrl . "login");
     exit;
 }
 
@@ -114,12 +114,12 @@ if ($route === '' || $route === 'dashboard') {
     require_once __DIR__ . '/helpers/tenant_context.php';
     if (isset($_SESSION['usuario_id'])) {
         if ($_SESSION['usuario_role'] === 'superadmin') {
-            header("Location: superadmin");
+            header("Location: " . $baseUrl . "superadmin");
         } else {
-            header("Location: t/" . $_SESSION['empresa_slug'] . "/dashboard");
+            header("Location: " . $baseUrl . "t/" . $_SESSION['empresa_slug'] . "/dashboard");
         }
     } else {
-        header("Location: login");
+        header("Location: " . $baseUrl . "login");
     }
     exit;
 }

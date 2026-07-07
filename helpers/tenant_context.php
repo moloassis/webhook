@@ -16,7 +16,9 @@ function exigirAutenticacao(): void
     if (!isset($_SESSION['usuario_id'])) {
         // Salva a URL solicitada para redirecionamento pós-login
         $redirect = $_SERVER['REQUEST_URI'];
-        $loginUrl = 'login?redirect=' . urlencode($redirect);
+        global $baseUrl;
+        $base = isset($baseUrl) ? $baseUrl : '/';
+        $loginUrl = $base . 'login?redirect=' . urlencode($redirect);
         header("Location: " . $loginUrl);
         exit;
     }
