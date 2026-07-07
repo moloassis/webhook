@@ -6,6 +6,10 @@
 // Define o fuso horário oficial para o Brasil (Brasília)
 date_default_timezone_set('America/Sao_Paulo');
 
+// Configurações globais de duração da sessão PHP (24 horas) para evitar deslogamentos involuntários
+ini_set('session.gc_maxlifetime', 86400);
+ini_set('session.cookie_lifetime', 86400);
+
 // Detecção automática de ambiente (Local vs Produção na VPS Hostinger)
 $isLocal = (php_sapi_name() === 'cli' 
     || (isset($_SERVER['HTTP_HOST']) && ($_SERVER['HTTP_HOST'] === 'localhost' || $_SERVER['HTTP_HOST'] === '127.0.0.1'))

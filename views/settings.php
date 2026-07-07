@@ -144,6 +144,15 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
                         </select>
                     </div>
 
+                    <!-- Tempo Limite de Espera (Aguardando Resposta) -->
+                    <div class="form-group" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <label class="label-text" for="tempo_limite_espera" style="font-size: 0.85rem;">Tempo Limite de Espera (minutos)</label>
+                        <input type="number" id="tempo_limite_espera" name="tempo_limite_espera" min="1" max="120" value="<?= htmlspecialchars($tenantConfig['tempo_limite_espera'] ?? 5) ?>" class="form-control" style="width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.6rem; color: var(--text-primary); outline: none;">
+                        <span class="label-text" style="font-size: 0.72rem; color: var(--text-secondary);">
+                            Tempo sem resposta do suporte necessário para disparar a sirene e alertas sonoros/push (padrão: 5).
+                        </span>
+                    </div>
+
                     <!-- Logo File Upload -->
                     <div class="form-group" style="display: flex; flex-direction: column; gap: 0.5rem;">
                         <label class="label-text" for="logo_file" style="font-size: 0.85rem;">Logotipo da Empresa</label>

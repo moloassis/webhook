@@ -38,6 +38,16 @@ function obterConexao(): PDO {
             } catch (Exception $e) {
                 // Silenciosamente ignora se a tabela tenants não existir ainda
             }
+
+            // Auto-migração/Self-healing para o campo tempo_limite_espera na tabela tenants
+            try {
+                $q = $pdo->query("SHOW COLUMNS FROM tenants LIKE 'tempo_limite_espera'");
+                if ($q && $q->rowCount() === 0) {
+                    $pdo->exec("ALTER TABLE tenants ADD COLUMN tempo_limite_espera INT DEFAULT 5 AFTER exibicao_logo");
+                }
+            } catch (Exception $e) {
+                // Silenciosamente ignora se a tabela tenants não existir ainda
+            }
         } catch (PDOException $e) {
             // Registra o erro internamente com segurança
             registrarErro("Falha na conexão PDO: " . $e->getMessage(), [

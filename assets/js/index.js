@@ -578,13 +578,14 @@
                  const criadoEmDate = new Date(item.criado_em.replace(/-/g, "/"));
                  const diffSeconds = Math.floor((new Date() - criadoEmDate) / 1000);
                  const diffMinutes = Math.floor(diffSeconds / 60);
+                 const limiteMinutos = (window.SYSTEM_CONFIG && window.SYSTEM_CONFIG.tempoLimiteEspera) ? parseInt(window.SYSTEM_CONFIG.tempoLimiteEspera, 10) : 5;
  
                  let waitingHTML = '';
                  if (estilo.classe === 'type-atendimento_humano') {
-                     if (diffMinutes >= 5) {
+                     if (diffMinutes >= limiteMinutos) {
                          waitingHTML = `<span class="waiting-badge warning" style="animation: pulse-border 1.5s infinite; background: rgba(255, 71, 87, 0.15); color: #ff4757; font-weight: 600; font-size: 0.72rem; padding: 0.2rem 0.5rem; border-radius: 6px; border: 1px solid rgba(255, 71, 87, 0.3); display: inline-flex; align-items: center; gap: 4px;">⚠️ SEM RESPOSTA HÁ ${diffMinutes}m</span>`;
                          
-                         // Envia notificação nativa uma única vez por chamado ao bater 5 minutos
+                         // Envia notificação nativa uma única vez por chamado ao bater o limite
                          if (!alertasEnviados.has(item.id)) {
                              alertasEnviados.add(item.id);
                              
@@ -595,7 +596,7 @@
                              if (Notification.permission === 'granted') {
                                  try {
                                      new Notification("🚨 Alerta de Espera - Central de Alertas", {
-                                         body: `O cliente "${item.nome_cliente || 'Desconhecido'}" está aguardando atendimento humano há mais de 5 minutos!`,
+                                         body: `O cliente "${item.nome_cliente || 'Desconhecido'}" está aguardando atendimento humano há mais de ${limiteMinutos} minutos!`,
                                          icon: 'assets/img/icon_192.png'
                                      });
                                  } catch (err) {

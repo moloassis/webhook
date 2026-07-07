@@ -208,6 +208,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $corSecundaria = isset($_POST['cor_secundaria']) ? trim($_POST['cor_secundaria']) : '#70a1ff';
             $modoVisualizacao = isset($_POST['modo_visualizacao']) ? trim($_POST['modo_visualizacao']) : 'dark';
             $exibicaoLogo = isset($_POST['exibicao_logo']) ? trim($_POST['exibicao_logo']) : 'logo_nome';
+            $tempoLimiteEspera = isset($_POST['tempo_limite_espera']) ? (int)$_POST['tempo_limite_espera'] : 5;
 
             try {
                 $db = obterConexao();
@@ -241,12 +242,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
 
-                $stmtUpdate = $db->prepare("UPDATE tenants SET cor_primaria = :cp, cor_secundaria = :cs, modo_visualizacao = :mv, exibicao_logo = :el WHERE id = :id");
+                $stmtUpdate = $db->prepare("UPDATE tenants SET cor_primaria = :cp, cor_secundaria = :cs, modo_visualizacao = :mv, exibicao_logo = :el, tempo_limite_espera = :tle WHERE id = :id");
                 $stmtUpdate->execute([
                     ':cp' => $corPrimaria,
                     ':cs' => $corSecundaria,
                     ':mv' => $modoVisualizacao,
                     ':el' => $exibicaoLogo,
+                    ':tle' => $tempoLimiteEspera,
                     ':id' => $empresaId
                 ]);
 

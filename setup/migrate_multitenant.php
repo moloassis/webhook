@@ -23,6 +23,7 @@ try {
         `slug` VARCHAR(100) NOT NULL,
         `logo_path` VARCHAR(255) DEFAULT NULL,
         `exibicao_logo` VARCHAR(20) DEFAULT 'logo_nome',
+        `tempo_limite_espera` INT DEFAULT 5,
         `cor_primaria` VARCHAR(7) DEFAULT '#2ed573',
         `cor_secundaria` VARCHAR(7) DEFAULT '#70a1ff',
         `modo_visualizacao` ENUM('dark', 'light') DEFAULT 'dark',
