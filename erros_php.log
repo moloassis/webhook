@@ -2,3 +2,6 @@
 Stack trace:
 #0 {main}
   thrown in Command line code on line 1
+[09-Jul-2026 11:54:20 America/Sao_Paulo] PHP Parse error:  syntax error, unexpected token "catch" in C:\Users\Moloise\OneDrive\www\webhook\controllers\superadmin_controller.php on line 118
+[09-Jul-2026 11:54:22 America/Sao_Paulo] PHP Parse error:  syntax error, unexpected token "catch" in C:\Users\Moloise\OneDrive\www\webhook\controllers\superadmin_controller.php on line 118
+[09-Jul-2026 11:54:27 America/Sao_Paulo] PHP Parse error:  syntax error, unexpected token "catch" in C:\Users\Moloise\OneDrive\www\webhook\controllers\superadmin_controller.php on line 118

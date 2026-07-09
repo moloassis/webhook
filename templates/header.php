@@ -72,95 +72,101 @@ $corSecundariaGlow = hex2rgba($corSecundaria, 0.4);
                 <?php echo $corSecundariaGlow; ?>
             ;
 
-            <?php if ($modoVisualizacao === 'light'): ?>
-                --bg-gradient: linear-gradient(135deg, #f5f6fa 0%, #dfe4ea 100%);
-                --panel-bg: rgba(255, 255, 255, 0.85);
-                --card-bg: rgba(255, 255, 255, 0.95);
-                --border-color: rgba(0, 0, 0, 0.08);
-                --text-primary: #2f3542;
-                --text-secondary: #747d8c;
-            <?php endif; ?>
         }
 
-        <?php if ($modoVisualizacao === 'light'): ?>
-            /* Sobrescreve estilos escuros nativos para White-Label Light Mode */
-            h1,
-            .panel-title,
-            .label-text,
-            .metric-value,
-            .metric-label {
-                background: none !important;
-                -webkit-text-fill-color: initial !important;
-                color: var(--text-primary) !important;
-            }
+        /* Estilos do Tema Claro (Light Mode) */
+        body.light-mode {
+            --bg-gradient: linear-gradient(135deg, #f5f6fa 0%, #dfe4ea 100%);
+            --panel-bg: rgba(255, 255, 255, 0.85);
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --border-color: rgba(0, 0, 0, 0.08);
+            --text-primary: #2f3542;
+            --text-secondary: #747d8c;
+        }
 
-            header {
-                background: rgba(255, 255, 255, 0.9) !important;
-            }
+        body.light-mode h1,
+        body.light-mode .panel-title,
+        body.light-mode .label-text,
+        body.light-mode .metric-value,
+        body.light-mode .metric-label {
+            background: none !important;
+            -webkit-text-fill-color: initial !important;
+            color: var(--text-primary) !important;
+        }
 
-            .logo-header h1 {
-                background: none !important;
-                -webkit-text-fill-color: initial !important;
-                color: var(--text-primary) !important;
-            }
+        body.light-mode header {
+            background: rgba(255, 255, 255, 0.9) !important;
+        }
 
-            .btn-view-logs {
-                background: rgba(0, 0, 0, 0.03) !important;
-                color: var(--text-primary) !important;
-            }
+        body.light-mode .logo-header h1 {
+            background: none !important;
+            -webkit-text-fill-color: initial !important;
+            color: var(--text-primary) !important;
+        }
 
-            .btn-view-logs:hover {
-                background: rgba(0, 0, 0, 0.06) !important;
-            }
+        body.light-mode .btn-view-logs {
+            background: rgba(0, 0, 0, 0.03) !important;
+            color: var(--text-primary) !important;
+        }
 
-            .form-control,
-            input,
-            select,
-            textarea {
-                background: rgba(255, 255, 255, 0.95) !important;
-                color: var(--text-primary) !important;
-                border-color: rgba(0, 0, 0, 0.15) !important;
-            }
-            .form-control:focus,
-            input:focus,
-            select:focus,
-            textarea:focus {
-                border-color: var(--color-default) !important;
-                box-shadow: 0 0 5px rgba(30, 144, 255, 0.25) !important;
-            }
-            .form-control option,
-            select option {
-                background-color: #ffffff !important;
-                color: var(--text-primary) !important;
-            }
-            ::placeholder,
-            .form-control::placeholder,
-            input::placeholder,
-            textarea::placeholder {
-                color: #a4b0be !important;
-                opacity: 1 !important;
-            }
-            .alert-card:hover {
-                background: #ffffff !important;
-                border-color: rgba(0, 0, 0, 0.12) !important;
-                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06) !important;
-            }
-            #pwaInstallPanel {
-                background: linear-gradient(135deg, rgba(30, 144, 255, 0.06), rgba(255, 255, 255, 0.85)) !important;
-                border-color: rgba(30, 144, 255, 0.22) !important;
-            }
-            #pwaInstallPanel .panel-title {
-                color: #0066cc !important;
-            }
-            .webhook-table th {
-                background: rgba(0, 0, 0, 0.02) !important;
-                color: var(--text-primary) !important;
-            }
-            .webhook-table tr:hover {
-                background: rgba(0, 0, 0, 0.01) !important;
-            }
+        body.light-mode .btn-view-logs:hover {
+            background: rgba(0, 0, 0, 0.06) !important;
+        }
 
-        <?php endif; ?>
+        body.light-mode .form-control,
+        body.light-mode input,
+        body.light-mode select,
+        body.light-mode textarea {
+            background: rgba(255, 255, 255, 0.95) !important;
+            color: var(--text-primary) !important;
+            border-color: rgba(0, 0, 0, 0.15) !important;
+        }
+        
+        body.light-mode .form-control:focus,
+        body.light-mode input:focus,
+        body.light-mode select:focus,
+        body.light-mode textarea:focus {
+            border-color: var(--color-default) !important;
+            box-shadow: 0 0 5px rgba(30, 144, 255, 0.25) !important;
+        }
+        
+        body.light-mode .form-control option,
+        body.light-mode select option {
+            background-color: #ffffff !important;
+            color: var(--text-primary) !important;
+        }
+        
+        body.light-mode ::placeholder,
+        body.light-mode .form-control::placeholder,
+        body.light-mode input::placeholder,
+        body.light-mode textarea::placeholder {
+            color: #a4b0be !important;
+            opacity: 1 !important;
+        }
+        
+        body.light-mode .alert-card:hover {
+            background: #ffffff !important;
+            border-color: rgba(0, 0, 0, 0.12) !important;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06) !important;
+        }
+        
+        body.light-mode #pwaInstallPanel {
+            background: linear-gradient(135deg, rgba(30, 144, 255, 0.06), rgba(255, 255, 255, 0.85)) !important;
+            border-color: rgba(30, 144, 255, 0.22) !important;
+        }
+        
+        body.light-mode #pwaInstallPanel .panel-title {
+            color: #0066cc !important;
+        }
+        
+        body.light-mode .webhook-table th {
+            background: rgba(0, 0, 0, 0.02) !important;
+            color: var(--text-primary) !important;
+        }
+        
+        body.light-mode .webhook-table tr:hover {
+            background: rgba(0, 0, 0, 0.01) !important;
+        }
     </style>
 
     <!-- Configurações do Sistema injetadas do Backend -->
@@ -174,12 +180,13 @@ $corSecundariaGlow = hex2rgba($corSecundaria, 0.4);
             webhookToken: "<?php echo htmlspecialchars($tenantConfig['webhook_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>",
             tempoLimiteEspera: <?php echo (int)($tenantConfig['tempo_limite_espera'] ?? 5); ?>,
             serverTime: "<?php echo date('Y/m/d H:i:s'); ?>",
-            userRole: "<?php echo $_SESSION['usuario_role'] ?? 'user'; ?>"
+            userRole: "<?php echo $_SESSION['usuario_role'] ?? 'user'; ?>",
+            csrfToken: "<?php echo obterTokenCSRF(); ?>"
         };
     </script>
 </head>
 
-<body>
+<body class="<?php echo ($modoVisualizacao === 'light') ? 'light-mode' : ''; ?>">
 
     <!-- Modal Urgente em Tela Cheia (Disponível em qualquer página do App) -->
     <div id="urgentAlertModal" class="urgent-modal">
@@ -224,6 +231,14 @@ $corSecundariaGlow = hex2rgba($corSecundaria, 0.4);
                 <span id="statusText">Conectando...</span>
             </div>
 
+            <?php if (isset($_SESSION['usuario_role']) && $_SESSION['usuario_role'] === 'superadmin'): ?>
+                <!-- Badge de Modo Inspeção (apenas para superadmin inspecionando contas) -->
+                <div class="status-badge" style="background: rgba(255, 165, 0, 0.1); border-color: rgba(255, 165, 0, 0.3); color: #ffa502; font-weight: 600;">
+                    <span class="status-indicator" style="background-color: #ffa502; box-shadow: 0 0 8px #ffa502;"></span>
+                    <span>Modo Inspeção</span>
+                </div>
+            <?php endif; ?>
+
             <!-- Navegação Tabular de Páginas -->
             <a href="t/<?php echo $tenantSlug; ?>/dashboard" class="btn-view-logs"
                 style="<?php echo ($currentView === 'dashboard') ? 'background: rgba(30, 144, 255, 0.15); border-color: var(--color-default); font-weight: 600;' : ''; ?>"
@@ -245,10 +260,16 @@ $corSecundariaGlow = hex2rgba($corSecundaria, 0.4);
             </a>
 
             <!-- Botão de Sair -->
-            <a href="logout" class="btn-view-logs" style="border-color: rgba(255, 71, 87, 0.2); color: #ff4757;"
-                onmouseover="this.style.background='rgba(255,71,87,0.1)'" onmouseout="this.style.background='none'">
-                🚪 Sair
-            </a>
+            <?php if (isset($_SESSION['usuario_role']) && $_SESSION['usuario_role'] === 'superadmin'): ?>
+                <a class="btn-view-logs" style="border-color: rgba(255, 71, 87, 0.15); color: rgba(255, 71, 87, 0.4); cursor: not-allowed; opacity: 0.6; pointer-events: none; text-decoration: none;" title="O logout está desabilitado durante a inspeção de conta.">
+                    🚪 Sair
+                </a>
+            <?php else: ?>
+                <a href="logout" class="btn-view-logs" style="border-color: rgba(255, 71, 87, 0.2); color: #ff4757;"
+                    onmouseover="this.style.background='rgba(255,71,87,0.1)'" onmouseout="this.style.background='none'">
+                    🚪 Sair
+                </a>
+            <?php endif; ?>
 
         </div>
     </header>

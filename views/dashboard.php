@@ -1,3 +1,10 @@
+<?php if (isTenantReadOnlyMode()): ?>
+    <div style="background: rgba(255, 165, 0, 0.1); border: 1px solid rgba(255, 165, 0, 0.3); padding: 1rem; border-radius: 12px; color: #ffa502; font-weight: 500; font-size: 0.9rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px; grid-column: 1 / -1; width: 100%;">
+        <span>⚠️</span>
+        <span><strong>Modo de Inspeção (Somente Leitura):</strong> Você está visualizando o dashboard desta organização como Superadmin. Ações de simulação de webhook e resolução de alertas estão desabilitadas.</span>
+    </div>
+<?php endif; ?>
+
         <!-- Sidebar: Configurações e Simulador Webhook -->
         <div class="sidebar">
             
@@ -77,3 +84,34 @@
             </div>
 
         </div>
+
+<?php if (isTenantReadOnlyMode()): ?>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Desabilita simulador e outros botões
+    const inputs = document.querySelectorAll('#simulatorForm input, #simulatorForm select, #simulatorForm textarea, #simulatorForm button');
+    inputs.forEach(el => {
+        el.disabled = true;
+        el.style.opacity = '0.5';
+        el.style.cursor = 'not-allowed';
+    });
+    
+    // Intercepta e altera o comportamento de resolver/dispensar alertas dinâmicos
+    const originalFetch = window.fetch;
+    window.fetch = function(...args) {
+        const url = args[0];
+        if (typeof url === 'string' && url.includes('resolver.php')) {
+            alert('Ação não permitida em Modo de Inspeção (Somente Leitura).');
+            return Promise.resolve(new Response(JSON.stringify({
+                sucesso: false,
+                mensagem: 'Ação não permitida em Modo de Inspeção.'
+            }), {
+                status: 403,
+                headers: { 'Content-Type': 'application/json' }
+            }));
+        }
+        return originalFetch.apply(this, args);
+    };
+});
+</script>
+<?php endif; ?>

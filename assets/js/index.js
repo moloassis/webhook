@@ -328,7 +328,7 @@
             // Ouvinte de erros de autenticação disparados pelo SSE
             source.addEventListener('auth_error', function(e) {
                 console.error("Erro de autenticação no SSE:", e.data);
-                window.location.href = 'login';
+                window.location.href = 'login?redirect=' + encodeURIComponent(window.location.pathname + window.location.search);
             });
 
             // Quando a conexão é aberta com sucesso
@@ -395,7 +395,8 @@
             btnElement.disabled = true;
             btnElement.textContent = 'Dispensando...';
 
-            fetch('resolver.php?id=' + id, {
+            const csrfToken = window.SYSTEM_CONFIG ? window.SYSTEM_CONFIG.csrfToken : '';
+            fetch('resolver.php?id=' + id + '&csrf_token=' + encodeURIComponent(csrfToken), {
                 method: 'POST'
             })
             .then(res => {
@@ -431,7 +432,8 @@
             btnElement.disabled = true;
             btnElement.textContent = 'Dispensando...';
 
-            fetch('resolver.php?id=' + id, {
+            const csrfToken = window.SYSTEM_CONFIG ? window.SYSTEM_CONFIG.csrfToken : '';
+            fetch('resolver.php?id=' + id + '&csrf_token=' + encodeURIComponent(csrfToken), {
                 method: 'POST'
             })
             .then(res => {
@@ -474,7 +476,8 @@
             }, 300);
 
             // Dispara para o banco de dados em segundo plano
-            fetch('resolver.php?id=' + id, { method: 'POST' })
+            const csrfToken = window.SYSTEM_CONFIG ? window.SYSTEM_CONFIG.csrfToken : '';
+            fetch('resolver.php?id=' + id + '&csrf_token=' + encodeURIComponent(csrfToken), { method: 'POST' })
                 .catch(err => console.error("Erro ao dispensar em background:", err));
         }
 
@@ -485,7 +488,8 @@
             atualizarContadores();
  
             // Dispara para o banco de dados em segundo plano
-            fetch('resolver.php?id=' + id, { method: 'POST' })
+            const csrfToken = window.SYSTEM_CONFIG ? window.SYSTEM_CONFIG.csrfToken : '';
+            fetch('resolver.php?id=' + id + '&csrf_token=' + encodeURIComponent(csrfToken), { method: 'POST' })
                 .catch(err => console.error("Erro ao dispensar em background:", err));
         }
 
@@ -499,7 +503,8 @@
             atualizarContadores();
 
             // Atualiza no banco de dados em segundo plano definindo status como 'aguardando'
-            fetch('resolver.php?id=' + id + '&status=aguardando', { method: 'POST' })
+            const csrfToken = window.SYSTEM_CONFIG ? window.SYSTEM_CONFIG.csrfToken : '';
+            fetch('resolver.php?id=' + id + '&status=aguardando&csrf_token=' + encodeURIComponent(csrfToken), { method: 'POST' })
                 .catch(err => console.error("Erro ao fechar modal temporariamente:", err));
         }
 

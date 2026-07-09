@@ -3,9 +3,15 @@
  */
 
 :root {
-    --color-default: #70a1ff;
+    --color-default: #1e90ff;
     --color-lead: #2ed573;
     --color-atendimento: #ff4757;
+    --color-yellow: #ffa502;
+    --panel-bg: rgba(20, 20, 35, 0.6);
+    --border-color: rgba(255, 255, 255, 0.07);
+    --card-bg: rgba(30, 30, 48, 0.45);
+    --text-primary: #f1f2f6;
+    --text-secondary: #a4b0be;
 }
 
 body {
@@ -23,16 +29,386 @@ header.sa-header {
     align-items: center;
     border-bottom: 1px solid var(--border-color);
     padding-bottom: 1.5rem;
+    margin-bottom: 1.5rem;
 }
 
-.panel-grid {
+/* Navegação por Abas */
+.sa-nav {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.8rem;
+    overflow-x: auto;
+}
+
+.nav-item {
+    color: var(--text-secondary);
+    text-decoration: none;
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    font-weight: 500;
+    font-size: 0.95rem;
+    transition: all 0.3s;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid transparent;
+}
+
+.nav-item:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.nav-item.active {
+    color: #fff;
+    background: linear-gradient(135deg, rgba(30, 144, 255, 0.25) 0%, rgba(30, 144, 255, 0.1) 100%);
+    border-color: rgba(30, 144, 255, 0.3);
+    box-shadow: 0 4px 15px rgba(30, 144, 255, 0.15);
+}
+
+/* Grid de Métricas */
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.metric-card {
+    background: var(--panel-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    backdrop-filter: blur(12px);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.metric-icon {
+    font-size: 2.2rem;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.metric-info h3 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    letter-spacing: 0.5px;
+    margin: 0;
+}
+
+.metric-info p {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin: 0.3rem 0 0 0;
+    color: #fff;
+}
+
+/* Seção de Gráficos */
+.charts-container {
     display: grid;
     grid-template-columns: 2fr 1fr;
     gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.chart-box {
+    background: var(--panel-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 1.5rem;
+    backdrop-filter: blur(12px);
+}
+
+.chart-box h3 {
+    margin-top: 0;
+    margin-bottom: 1.2rem;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+}
+
+/* Acordeão de Organizações */
+.org-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.org-item {
+    background: var(--panel-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s;
+}
+
+.org-header {
+    padding: 1.2rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.01);
+    transition: background 0.2s;
+}
+
+.org-header:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.org-name {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+}
+
+.org-slug {
+    font-size: 0.78rem;
+    font-family: monospace;
+    color: var(--text-secondary);
+}
+
+.org-color-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.accordion-arrow {
+    font-size: 0.8rem;
+    transition: transform 0.2s;
+    color: var(--text-secondary);
+}
+
+.org-item.active .accordion-arrow {
+    transform: rotate(180deg);
+}
+
+.org-details {
+    padding: 1.5rem;
+    border-top: 1px solid var(--border-color);
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.org-details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+
+.org-section h4 {
+    margin-top: 0;
+    margin-bottom: 1.2rem;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+}
+
+.users-list {
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.users-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    text-align: left;
+}
+
+.users-table th, .users-table td {
+    padding: 0.6rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.users-table th {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.btn-action-small {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-action-small:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.btn-submit-small {
+    background: linear-gradient(135deg, #1e90ff, #00bfff);
+    border: none;
+    color: #fff;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    font-weight: 600;
+    width: 100%;
+    margin-top: 1rem;
+}
+
+.btn-danger-small {
+    background: rgba(255, 71, 87, 0.12);
+    border: 1px solid rgba(255, 71, 87, 0.25);
+    color: var(--color-atendimento);
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.btn-danger-small:hover {
+    background: rgba(255, 71, 87, 0.25);
+}
+
+.org-footer-actions {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* Modais nativos */
+dialog {
+    background: #110e2b;
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 1.5rem;
+    color: var(--text-primary);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    width: 90%;
+    max-width: 400px;
+    margin: auto;
+}
+
+dialog::backdrop {
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+}
+
+/* Logs do Sistema */
+.logs-container {
+    background: var(--panel-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.logs-tabs {
+    display: flex;
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.log-tab-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    padding: 1rem 1.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    border-bottom: 2px solid transparent;
+}
+
+.log-tab-btn:hover {
+    color: var(--text-primary);
+}
+
+.log-tab-btn.active {
+    color: var(--color-default);
+    border-bottom-color: var(--color-default);
+    background: rgba(255,255,255,0.02);
+}
+
+.log-viewer-wrapper {
+    display: flex;
+    flex-direction: column;
+}
+
+.log-viewer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.8rem 1.2rem;
+    background: rgba(255,255,255,0.02);
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.log-terminal {
+    background: #07070b;
+    color: #00ff66;
+    padding: 1.2rem;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 0.85rem;
+    max-height: 480px;
+    overflow-y: auto;
+    margin: 0;
+    white-space: pre-wrap;
+    text-align: left;
+    line-height: 1.4;
+}
+
+/* Formulário Genérico */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-bottom: 1rem;
+}
+
+.form-control {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.6rem;
+    color: var(--text-primary);
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.form-control:focus {
+    border-color: var(--color-default);
+}
+
+.color-picker {
+    height: 40px;
+    padding: 0.2rem;
+    cursor: pointer;
 }
 
 @media (max-width: 900px) {
-    .panel-grid {
+    .charts-container {
         grid-template-columns: 1fr;
     }
+    
+    .org-details-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
 }
+

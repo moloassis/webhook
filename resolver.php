@@ -16,12 +16,42 @@ if (!isset($_SESSION['usuario_id'])) {
     exit;
 }
 
+// Bloqueio de gravação em Modo Inspeção (Somente Leitura)
+if (isTenantReadOnlyMode()) {
+    try {
+        $db = obterConexao();
+        $stmtAudit = $db->prepare("INSERT INTO superadmin_auditoria_logs (usuario_id, usuario_nome, usuario_email, tenant_slug, tenant_nome, acao, detalhes, ip) 
+            VALUES (:usuario_id, :usuario_nome, :usuario_email, :tenant_slug, :tenant_nome, 'acao_bloqueada', 'Tentativa de resolver chamado bloqueada por Somente Leitura.', :ip)");
+        $stmtAudit->execute([
+            ':usuario_id' => (int)$_SESSION['usuario_id'],
+            ':usuario_nome' => $_SESSION['usuario_nome'],
+            ':usuario_email' => $_SESSION['usuario_email'],
+            ':tenant_slug' => $_SESSION['tenant_ativo_slug'] ?? '',
+            ':tenant_nome' => $_SESSION['tenant_ativo_nome'] ?? '',
+            ':ip' => $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1'
+        ]);
+    } catch (Exception $e) {
+        registrarErro("Erro ao registrar tentativa bloqueada no log de auditoria: " . $e->getMessage());
+    }
+
+    http_response_code(403);
+    echo json_encode(['sucesso' => false, 'mensagem' => 'Ação não permitida em Modo de Inspeção (Somente Leitura).'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 $empresaId = (int)$_SESSION['tenant_ativo_id'];
 
 // Valida se o método é POST para segurança
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     echo json_encode(['sucesso' => false, 'mensagem' => 'Método não permitido. Utilize POST.']);
+    exit;
+}
+
+// Valida token CSRF
+if (!validarTokenCSRF()) {
+    http_response_code(403);
+    echo json_encode(['sucesso' => false, 'mensagem' => 'Sessão expirada ou token de segurança inválido. Recarregue a página.']);
     exit;
 }
 

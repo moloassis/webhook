@@ -16,6 +16,19 @@ $baseUrl = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\') . '/';
 
 // 3. Captura e limpa a rota da URL amigável
 $route = isset($_GET['route']) ? trim($_GET['route'], '/') : '';
+if ($route === '') {
+    $requestUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+    $scriptName = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
+    if ($scriptName !== '' && strpos($requestUri, $scriptName) === 0) {
+        $route = substr($requestUri, strlen($scriptName));
+    } else {
+        $route = $requestUri;
+    }
+    $route = trim($route, '/');
+    if (strpos($route, 'index.php') === 0) {
+        $route = trim(substr($route, 9), '/');
+    }
+}
 
 // 4. Tratamento das Rotas Públicas de Autenticação
 if ($route === 'login') {

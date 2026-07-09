@@ -17,6 +17,14 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
         </div>
     </div>
 
+    <?php if (isTenantReadOnlyMode()): ?>
+        <!-- Banner de Aviso de Modo Inspeção -->
+        <div style="background: rgba(255, 165, 0, 0.1); border: 1px solid rgba(255, 165, 0, 0.3); padding: 1rem; border-radius: 12px; color: #ffa502; font-weight: 500; font-size: 0.9rem; margin-top: 1.5rem; display: flex; align-items: center; gap: 10px; width: 100%;">
+            <span>⚠️</span>
+            <span><strong>Modo de Inspeção (Somente Leitura):</strong> Você está visualizando as configurações desta organização como Superadmin. Alterações estão desabilitadas.</span>
+        </div>
+    <?php endif; ?>
+
     <!-- Mensagens de Feedback de Operação -->
     <div id="feedbackContainer" style="display: <?php echo ($sucessoMsg || $erroMsg) ? 'block' : 'none'; ?>;">
         <div id="feedbackMessage" style="<?php 
@@ -26,6 +34,8 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
             <span id="feedbackIcon"><?= $sucessoMsg ? '✔' : ($erroMsg ? '❌' : '') ?></span> 
             <span id="feedbackText"><?= htmlspecialchars($sucessoMsg ?: $erroMsg) ?></span>
         </div>
+    </div>
+
     <style>
     /* Layout principal das configurações */
     .settings-layout {
@@ -276,6 +286,7 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
                         🎛️ Parâmetros do Painel
                     </h3>
                     <form action="<?php echo htmlspecialchars($_SERVER['REQUEST_URI'], ENT_QUOTES, 'UTF-8'); ?>" method="POST" style="display: flex; flex-direction: column; gap: 1.2rem;">
+                        <?php echo renderizarCampoCSRF(); ?>
                         <input type="hidden" name="action" value="save_general">
                         
                         <div class="form-group" style="display: flex; flex-direction: column; gap: 0.5rem;">
@@ -302,6 +313,7 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
                         🎨 Customização Visual (White-Label)
                     </h3>
                     <form action="<?php echo htmlspecialchars($_SERVER['REQUEST_URI'], ENT_QUOTES, 'UTF-8'); ?>" method="POST" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 1.2rem;">
+                        <?php echo renderizarCampoCSRF(); ?>
                         <input type="hidden" name="action" value="save_whitelabel">
                         
                         <!-- Cores -->
@@ -382,6 +394,7 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
 
                     <!-- Formulário oculto para excluir logotipo -->
                     <form id="deleteLogoForm" action="<?php echo htmlspecialchars($_SERVER['REQUEST_URI'], ENT_QUOTES, 'UTF-8'); ?>" method="POST" style="display:none;">
+                        <?php echo renderizarCampoCSRF(); ?>
                         <input type="hidden" name="action" value="delete_logo">
                     </form>
                 </div>
@@ -395,6 +408,7 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
                     </h3>
                     
                     <form action="<?php echo htmlspecialchars($_SERVER['REQUEST_URI'], ENT_QUOTES, 'UTF-8'); ?>" method="POST" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 0.8rem; margin-bottom: 1.2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1.2rem;">
+                        <?php echo renderizarCampoCSRF(); ?>
                         <input type="hidden" name="action" value="upload_audio">
                         <div style="display: flex; gap: 8px; width: 100%;">
                             <input type="file" id="audio_file" name="audio_file" accept="audio/*" required class="form-control" style="flex: 1; font-size: 0.8rem; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); padding: 0.4rem; border-radius: 8px;">
@@ -422,6 +436,7 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
 
                     <!-- Formulário para Adicionar Novo Usuário -->
                     <form id="addUserForm" action="<?php echo htmlspecialchars($_SERVER['REQUEST_URI'], ENT_QUOTES, 'UTF-8'); ?>" method="POST" style="border-top: 1px solid var(--border-color); padding-top: 1.2rem; display: flex; flex-direction: column; gap: 0.8rem;">
+                        <?php echo renderizarCampoCSRF(); ?>
                         <input type="hidden" name="action" value="add_user">
                         <span class="label-text" style="font-weight: 600; display: block; margin-bottom: 2px;">➕ Cadastrar Novo Membro</span>
                         
@@ -576,20 +591,8 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
         
         // 2. Atualizar Modo Visualização (Claro / Escuro)
         if (marca.modo_visualizacao === 'light') {
-            document.documentElement.style.setProperty('--bg-gradient', 'linear-gradient(135deg, #f5f6fa 0%, #dfe4ea 100%)');
-            document.documentElement.style.setProperty('--panel-bg', 'rgba(255, 255, 255, 0.85)');
-            document.documentElement.style.setProperty('--card-bg', 'rgba(255, 255, 255, 0.95)');
-            document.documentElement.style.setProperty('--border-color', 'rgba(0, 0, 0, 0.08)');
-            document.documentElement.style.setProperty('--text-primary', '#2f3542');
-            document.documentElement.style.setProperty('--text-secondary', '#747d8c');
             document.body.classList.add('light-mode');
         } else {
-            document.documentElement.style.removeProperty('--bg-gradient');
-            document.documentElement.style.removeProperty('--panel-bg');
-            document.documentElement.style.removeProperty('--card-bg');
-            document.documentElement.style.removeProperty('--border-color');
-            document.documentElement.style.removeProperty('--text-primary');
-            document.documentElement.style.removeProperty('--text-secondary');
             document.body.classList.remove('light-mode');
         }
         
@@ -771,8 +774,32 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
             showFeedback('Erro interno ao processar a ação.', false);
         });
     });
-</script>:', err);
-            showFeedback('Erro interno ao processar a ação.', false);
-        });
-    });
 </script>
+
+<?php if (isTenantReadOnlyMode()): ?>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Desabilita todos os formulários e botões na página de configurações
+    const inputs = document.querySelectorAll('input, select, textarea, button');
+    inputs.forEach(el => {
+        // Ignora os botões de navegação das abas de configurações e o botão de sair
+        if (!el.classList.contains('settings-tab-btn') && !el.classList.contains('btn-view-logs')) {
+            el.disabled = true;
+            el.style.opacity = '0.5';
+            el.style.cursor = 'not-allowed';
+        }
+    });
+
+    // Desabilita cliques em links que executam ações (exceto navegação)
+    const links = document.querySelectorAll('a');
+    links.forEach(el => {
+        const href = el.getAttribute('href');
+        if (href && (href.startsWith('javascript:') || href === '#')) {
+            el.style.pointerEvents = 'none';
+            el.style.opacity = '0.5';
+            el.style.cursor = 'not-allowed';
+        }
+    });
+});
+</script>
+<?php endif; ?>

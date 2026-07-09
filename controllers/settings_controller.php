@@ -145,7 +145,45 @@ $erroMsg = isset($_GET['error']) ? $_GET['error'] : '';
 
 // 1. Processar Ações Admin (Salvar limite, Som, White-Label, Gerenciar Usuários)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $statusQuery = '';
+    $isAjax = isset($_POST['ajax']) || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
+    if (!validarTokenCSRF()) {
+        if ($isAjax) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'message' => 'Sessão expirada ou token de segurança inválido. Recarregue a página.']);
+            exit;
+        }
+        $statusQuery = 'error=' . urlencode('Sessão expirada ou token de segurança inválido. Recarregue a página.');
+    } else {
+        $statusQuery = '';
+        
+        // Bloqueio de gravação em Modo Inspeção (Somente Leitura)
+        if (isTenantReadOnlyMode()) {
+            $action = isset($_POST['action']) ? $_POST['action'] : 'desconhecida';
+        try {
+            $db = obterConexao();
+            $stmtAudit = $db->prepare("INSERT INTO superadmin_auditoria_logs (usuario_id, usuario_nome, usuario_email, tenant_slug, tenant_nome, acao, detalhes, ip) 
+                VALUES (:usuario_id, :usuario_nome, :usuario_email, :tenant_slug, :tenant_nome, 'acao_bloqueada', :detalhes, :ip)");
+            $stmtAudit->execute([
+                ':usuario_id' => (int)$_SESSION['usuario_id'],
+                ':usuario_nome' => $_SESSION['usuario_nome'],
+                ':usuario_email' => $_SESSION['usuario_email'],
+                ':tenant_slug' => $_SESSION['tenant_ativo_slug'] ?? '',
+                ':tenant_nome' => $_SESSION['tenant_ativo_nome'] ?? '',
+                ':detalhes' => "Tentativa de realizar ação '{$action}' em configurações bloqueada por Somente Leitura.",
+                ':ip' => $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1'
+            ]);
+        } catch (Exception $e) {
+            registrarErro("Erro ao registrar tentativa bloqueada no log de auditoria: " . $e->getMessage());
+        }
+
+        if (isset($_POST['ajax']) || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'message' => 'Ação não permitida em Modo de Inspeção (Somente Leitura).']);
+            exit;
+        }
+        header("Location: " . $_SERVER['REQUEST_URI'] . (strpos($_SERVER['REQUEST_URI'], '?') === false ? '?' : '&') . 'error=' . urlencode('Ação não permitida em Modo de Inspeção (Somente Leitura).'));
+        exit;
+    }
     
     // Segurança: Apenas Administradores alteram as configurações do tenant
     if (!$isAdmin) {
@@ -324,14 +362,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $uRole = isset($_POST['usuario_role']) ? trim($_POST['usuario_role']) : 'user';
 
             if ($uNome && $uEmail && $uSenha) {
-                try {
-                    $db = obterConexao();
-                    // Verifica se o e-mail já existe globalmente
-                    $stmtCheck = $db->prepare("SELECT COUNT(*) FROM usuarios WHERE email = :email");
-                    $stmtCheck->execute([':email' => $uEmail]);
-                    if ($stmtCheck->fetchColumn() > 0) {
-                        $statusQuery = 'error=' . urlencode('Este endereço de e-mail já está sendo utilizado.');
-                    } else {
+                $erroSenha = validarForcaSenha($uSenha);
+                if ($erroSenha) {
+                    $statusQuery = 'error=' . urlencode($erroSenha);
+                } else {
+                    try {
+                        $db = obterConexao();
+                        // Verifica se o e-mail já existe globalmente
+                        $stmtCheck = $db->prepare("SELECT COUNT(*) FROM usuarios WHERE email = :email");
+                        $stmtCheck->execute([':email' => $uEmail]);
+                        if ($stmtCheck->fetchColumn() > 0) {
+                            $statusQuery = 'error=' . urlencode('Este endereço de e-mail já está sendo utilizado.');
+                        } else {
                         $uSenhaHash = password_hash($uSenha, PASSWORD_DEFAULT);
                         $stmtAdd = $db->prepare("INSERT INTO usuarios (empresa_id, nome, email, senha_hash, role) 
                             VALUES (:empresa_id, :nome, :email, :senha_hash, :role)");
@@ -344,8 +386,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ]);
                         $statusQuery = 'success=' . urlencode('Novo usuário cadastrado com sucesso!');
                     }
-                } catch (Exception $e) {
-                    $statusQuery = 'error=' . urlencode('Erro ao cadastrar usuário: ' . $e->getMessage());
+                    } catch (Exception $e) {
+                        $statusQuery = 'error=' . urlencode('Erro ao cadastrar usuário: ' . $e->getMessage());
+                    }
                 }
             } else {
                 $statusQuery = 'error=' . urlencode('Preencha todos os campos do usuário.');
@@ -371,6 +414,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
         }
+    }
     }
     
     // Retorno para Fetch AJAX

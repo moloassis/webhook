@@ -81,3 +81,6 @@ function registrarErro(string $mensagem, array $contexto = []): void
     file_put_contents($caminhoLog, $linhaLog, FILE_APPEND | LOCK_EX);
 }
 
+// Carrega o helper de segurança globalmente
+require_once __DIR__ . '/helpers/security.php';
+

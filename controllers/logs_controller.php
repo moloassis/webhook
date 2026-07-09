@@ -12,17 +12,37 @@ $empresaId = (int)$_SESSION['tenant_ativo_id'];
 $erroLimpar = '';
 $erroListar = '';
 
-// Ação opcional: Limpar logs se solicitado pelo administrador (isolar por empresa_id)
 if (isset($_POST['action']) && $_POST['action'] === 'clear') {
-    try {
-        $db = obterConexao();
-        $stmtDel = $db->prepare("DELETE FROM webhook_logs WHERE empresa_id = :empresa_id");
-        $stmtDel->execute([':empresa_id' => $empresaId]);
-        // Recarrega a URL atual de forma limpa para limpar o POST
-        header("Location: " . $_SERVER['REQUEST_URI']);
-        exit;
-    } catch (Exception $e) {
-        $erroLimpar = "Falha ao limpar logs: " . $e->getMessage();
+    if (!validarTokenCSRF()) {
+        $erroLimpar = 'Sessão expirada ou token de segurança inválido. Recarregue a página.';
+    } elseif (isTenantReadOnlyMode()) {
+        try {
+            $db = obterConexao();
+            $stmtAudit = $db->prepare("INSERT INTO superadmin_auditoria_logs (usuario_id, usuario_nome, usuario_email, tenant_slug, tenant_nome, acao, detalhes, ip) 
+                VALUES (:usuario_id, :usuario_nome, :usuario_email, :tenant_slug, :tenant_nome, 'acao_bloqueada', 'Tentativa de limpar logs do webhook bloqueada por Somente Leitura.', :ip)");
+            $stmtAudit->execute([
+                ':usuario_id' => (int)$_SESSION['usuario_id'],
+                ':usuario_nome' => $_SESSION['usuario_nome'],
+                ':usuario_email' => $_SESSION['usuario_email'],
+                ':tenant_slug' => $_SESSION['tenant_ativo_slug'] ?? '',
+                ':tenant_nome' => $_SESSION['tenant_ativo_nome'] ?? '',
+                ':ip' => $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1'
+            ]);
+        } catch (Exception $e) {
+            registrarErro("Erro ao registrar tentativa bloqueada no log de auditoria: " . $e->getMessage());
+        }
+        $erroLimpar = 'Ação não permitida em Modo de Inspeção (Somente Leitura).';
+    } else {
+        try {
+            $db = obterConexao();
+            $stmtDel = $db->prepare("DELETE FROM webhook_logs WHERE empresa_id = :empresa_id");
+            $stmtDel->execute([':empresa_id' => $empresaId]);
+            // Recarrega a URL atual de forma limpa para limpar o POST
+            header("Location: " . $_SERVER['REQUEST_URI']);
+            exit;
+        } catch (Exception $e) {
+            $erroLimpar = "Falha ao limpar logs: " . $e->getMessage();
+        }
     }
 }
 

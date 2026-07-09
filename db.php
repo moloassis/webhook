@@ -55,6 +55,25 @@ function obterConexao(): PDO {
             } catch (Exception $e) {
                 // Silenciosamente ignora se a tabela chamados não existir ainda
             }
+
+            // Auto-migração/Self-healing para criar a tabela de auditoria de inspeções
+            try {
+                $pdo->exec("CREATE TABLE IF NOT EXISTS `superadmin_auditoria_logs` (
+                    `id` INT AUTO_INCREMENT PRIMARY KEY,
+                    `usuario_id` INT NOT NULL,
+                    `usuario_nome` VARCHAR(255) NOT NULL,
+                    `usuario_email` VARCHAR(255) NOT NULL,
+                    `tenant_slug` VARCHAR(100) NOT NULL,
+                    `tenant_nome` VARCHAR(255) NOT NULL,
+                    `acao` VARCHAR(50) NOT NULL,
+                    `detalhes` TEXT NULL,
+                    `ip` VARCHAR(45) NOT NULL,
+                    `criado_em` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    CONSTRAINT `fk_auditoria_usuario` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+            } catch (Exception $e) {
+                // Silenciosamente ignora
+            }
         } catch (PDOException $e) {
             // Registra o erro internamente com segurança
             registrarErro("Falha na conexão PDO: " . $e->getMessage(), [

@@ -22,6 +22,23 @@ function exigirAutenticacao(): void
         header("Location: " . $loginUrl);
         exit;
     }
+
+    // Garantir que o token JWT na sessão é válido e não expirou
+    require_once __DIR__ . '/jwt.php';
+    $token = $_SESSION['jwt_token'] ?? '';
+    $decoded = null;
+    if ($token) {
+        $decoded = JWT::decode($token, JWT_SECRET);
+    }
+    if (!$decoded) {
+        // Regenera o token se estiver expirado ou inválido (mas a sessão PHP ainda estiver viva)
+        $payload = [
+            'usuario_id' => (int) $_SESSION['usuario_id'],
+            'empresa_id' => $_SESSION['empresa_id'] ? (int) $_SESSION['empresa_id'] : null,
+            'role' => $_SESSION['usuario_role']
+        ];
+        $_SESSION['jwt_token'] = JWT::encode($payload, JWT_SECRET);
+    }
 }
 
 /**
@@ -113,6 +130,29 @@ function inicializarContextoTenant(string $slug): array
     $_SESSION['tenant_ativo_id'] = $tenant['id'];
     $_SESSION['tenant_ativo_slug'] = $tenant['slug'];
     $_SESSION['tenant_ativo_nome'] = $tenant['nome'];
+
+    // Se o usuário é um superadmin, registra o log de auditoria de início de inspeção (uma vez por sessão)
+    if ($_SESSION['usuario_role'] === 'superadmin') {
+        $sessaoChave = 'inspecionando_' . $tenant['slug'];
+        if (!isset($_SESSION[$sessaoChave])) {
+            $_SESSION[$sessaoChave] = true;
+            try {
+                $db = obterConexao();
+                $stmtAudit = $db->prepare("INSERT INTO superadmin_auditoria_logs (usuario_id, usuario_nome, usuario_email, tenant_slug, tenant_nome, acao, detalhes, ip) 
+                    VALUES (:usuario_id, :usuario_nome, :usuario_email, :tenant_slug, :tenant_nome, 'inspecionar_inicio', 'Superadmin iniciou inspeção na conta.', :ip)");
+                $stmtAudit->execute([
+                    ':usuario_id' => (int)$_SESSION['usuario_id'],
+                    ':usuario_nome' => $_SESSION['usuario_nome'],
+                    ':usuario_email' => $_SESSION['usuario_email'],
+                    ':tenant_slug' => $tenant['slug'],
+                    ':tenant_nome' => $tenant['nome'],
+                    ':ip' => $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1'
+                ]);
+            } catch (Exception $e) {
+                registrarErro("Erro ao salvar log de auditoria de inspeção: " . $e->getMessage());
+            }
+        }
+    }
     
     // Retorna as configurações do tenant
     return $tenant;
@@ -194,5 +234,13 @@ function enviarPushNotificacaoCustom(string $titulo, string $mensagemPush, strin
     } catch (Exception $e) {
         registrarErro("Falha ao processar Web Push Customizado: " . $e->getMessage());
     }
+}
+
+/**
+ * Verifica se o inquilino atual está em modo Somente Leitura (inspecionado por Superadmin)
+ */
+function isTenantReadOnlyMode(): bool
+{
+    return isset($_SESSION['usuario_role']) && $_SESSION['usuario_role'] === 'superadmin';
 }
 

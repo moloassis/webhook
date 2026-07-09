@@ -36,10 +36,11 @@ require_once __DIR__ . '/../controllers/login_controller.php';
             <?php endif; ?>
 
             <form method="POST" action="" style="display: flex; flex-direction: column; gap: 1.2rem;">
+                <?php echo renderizarCampoCSRF(); ?>
                 <div class="form-group">
                     <label for="email">E-mail</label>
                     <input type="email" id="email" name="email" class="form-input" placeholder="exemplo@madeinai.com.br"
-                        required autocomplete="username">
+                        required autocomplete="username" value="<?php echo htmlspecialchars($email); ?>">
                 </div>
 
                 <div class="form-group">
