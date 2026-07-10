@@ -289,8 +289,17 @@ if ($criarChamadoAtivo) {
             $stmtCheck->execute($paramsCheck);
             $exists = (int)$stmtCheck->fetchColumn();
             if ($exists > 0) {
-                // Já existe um chamado ativo para este cliente. Unifica ignorando a criação do segundo card duplicado.
-                enviarRespostaELog(200, true, "Chamado ativo já existente para este cliente. Evento unificado com sucesso.", null, $dadosBrutos, $dados, (int)$empresaId);
+                // Se for alteração de etapa do card no CRM (Kanban), resolvemos o chamado anterior
+                // para que o novo estágio seja inserido e gere um novo alerta visual/sonoro atualizado.
+                if ($eventType === 'PANEL_CARD_STEP_CHANGE' || $eventType === 'PANEL_CARD_UPDATE') {
+                    $sqlResolve = "UPDATE chamados SET status = 'resolvido' WHERE status IN ('pendente', 'aguardando') AND empresa_id = :empresa_id AND (";
+                    $sqlResolve .= implode(" OR ", $conds) . ")";
+                    $stmtResolve = $db->prepare($sqlResolve);
+                    $stmtResolve->execute($paramsCheck);
+                } else {
+                    // Já existe um chamado ativo para este cliente. Unifica ignorando a criação do segundo card duplicado.
+                    enviarRespostaELog(200, true, "Chamado ativo já existente para este cliente. Evento unificado com sucesso.", null, $dadosBrutos, $dados, (int)$empresaId);
+                }
             }
         }
 
