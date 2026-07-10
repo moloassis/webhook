@@ -17,7 +17,7 @@ if (!is_dir($audioDir)) {
 }
 
 // 0. Renderizar apenas a biblioteca de sons via AJAX GET
-if (isset($_GET['render_library'])) {
+if (isset($_GET['render_library']) && $_SERVER['REQUEST_METHOD'] === 'GET') {
     $somAtivo = obterConfiguracao('audio_alerta', 'assets/audio/notificacao.mp3');
     $somAtivoNome = basename($somAtivo);
     
@@ -48,6 +48,7 @@ if (isset($_GET['render_library'])) {
                 <span class="badge badge-success" style="font-size: 0.7rem; padding: 0.2rem 0.5rem; background: var(--color-lead); border-color: var(--color-lead);">ATIVADO</span>
             <?php elseif ($isAdmin): ?>
                 <form action="<?php echo htmlspecialchars($_SERVER['REQUEST_URI'], ENT_QUOTES, 'UTF-8'); ?>" method="POST" style="margin: 0;">
+                    <?php echo renderizarCampoCSRF(); ?>
                     <input type="hidden" name="action" value="select_audio">
                     <input type="hidden" name="audio_filename" value="default">
                     <button type="submit" class="btn-inspect" style="font-size: 0.75rem; padding: 0.3rem 0.6rem; border-radius: 6px;">Ativar</button>
@@ -81,11 +82,13 @@ if (isset($_GET['render_library'])) {
                             <span class="badge badge-success" style="font-size: 0.7rem; padding: 0.2rem 0.5rem; background: var(--color-lead); border-color: var(--color-lead);">ATIVADO</span>
                         <?php elseif ($isAdmin): ?>
                             <form action="<?php echo htmlspecialchars($_SERVER['REQUEST_URI'], ENT_QUOTES, 'UTF-8'); ?>" method="POST" style="margin: 0;">
+                                <?php echo renderizarCampoCSRF(); ?>
                                 <input type="hidden" name="action" value="select_audio">
                                 <input type="hidden" name="audio_filename" value="<?= htmlspecialchars($audioFile) ?>">
                                 <button type="submit" class="btn-inspect" style="font-size: 0.75rem; padding: 0.3rem 0.6rem; border-radius: 6px;">Ativar</button>
                             </form>
                             <form action="<?php echo htmlspecialchars($_SERVER['REQUEST_URI'], ENT_QUOTES, 'UTF-8'); ?>" method="POST" style="margin: 0;" onsubmit="return confirm('Excluir este áudio de notificação?')">
+                                <?php echo renderizarCampoCSRF(); ?>
                                 <input type="hidden" name="action" value="delete_audio">
                                 <input type="hidden" name="audio_filename" value="<?= htmlspecialchars($audioFile) ?>">
                                 <button type="submit" class="btn-inspect" style="font-size: 0.75rem; padding: 0.3rem 0.6rem; border-radius: 6px; background: rgba(255, 71, 87, 0.15); border-color: rgba(255, 71, 87, 0.3); color: var(--color-atendimento);">
@@ -104,7 +107,7 @@ if (isset($_GET['render_library'])) {
 }
 
 // 0.1 Renderizar apenas a lista de membros via AJAX GET
-if (isset($_GET['render_users'])) {
+if (isset($_GET['render_users']) && $_SERVER['REQUEST_METHOD'] === 'GET') {
     try {
         $db = obterConexao();
         $stmtUsers = $db->prepare("SELECT id, nome, email, role FROM usuarios WHERE empresa_id = :empresa_id ORDER BY role, nome");
@@ -126,6 +129,7 @@ if (isset($_GET['render_users'])) {
             </div>
             <?php if ($u['id'] !== (int)$_SESSION['usuario_id']): ?>
                 <form action="<?php echo htmlspecialchars($_SERVER['REQUEST_URI'], ENT_QUOTES, 'UTF-8'); ?>" method="POST" style="margin: 0;" onsubmit="event.preventDefault(); confirmarExcluirUsuario(this, <?= $u['id'] ?>, '<?= htmlspecialchars($u['nome'], ENT_QUOTES, 'UTF-8') ?>')">
+                    <?php echo renderizarCampoCSRF(); ?>
                     <input type="hidden" name="action" value="delete_user">
                     <input type="hidden" name="usuario_id" value="<?= $u['id'] ?>">
                     <button type="submit" class="btn-inspect" style="font-size: 0.7rem; padding: 0.25rem 0.5rem; border-radius: 6px; background: rgba(255, 71, 87, 0.15); border-color: rgba(255, 71, 87, 0.3); color: var(--color-atendimento);">

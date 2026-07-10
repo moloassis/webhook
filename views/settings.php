@@ -476,6 +476,12 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
         }
     }
 
+    function confirmarExcluirUsuario(form, id, nome) {
+        if (confirm("Deseja realmente remover o usuário " + nome + "?")) {
+            form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        }
+    }
+
     function showFeedback(message, isSuccess) {
         const container = document.getElementById('feedbackContainer');
         const msgDiv = document.getElementById('feedbackMessage');
