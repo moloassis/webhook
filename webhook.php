@@ -272,7 +272,7 @@ if ($criarChamadoAtivo) {
 
         // Evita duplicidade: se já existe um chamado ativo (pendente ou aguardando) para este contato/sessão nesta empresa, ignora a inserção
         if (!empty($sessionId) || !empty($nomeCliente)) {
-            $sqlCheck = "SELECT COUNT(*) FROM chamados WHERE status IN ('pendente', 'aguardando') AND empresa_id = :empresa_id AND (";
+            $sqlCheck = "SELECT id, status, mensagem, criado_em FROM chamados WHERE status IN ('pendente', 'aguardando') AND empresa_id = :empresa_id AND (";
             $paramsCheck = [':empresa_id' => $empresaId];
             $conds = [];
             if (!empty($sessionId)) {
@@ -283,13 +283,21 @@ if ($criarChamadoAtivo) {
                 $conds[] = "nome_cliente = :nome_cliente";
                 $paramsCheck[':nome_cliente'] = $nomeCliente;
             }
-            $sqlCheck .= implode(" OR ", $conds) . ")";
+            $sqlCheck .= implode(" OR ", $conds) . ") ORDER BY id DESC LIMIT 1";
             
             $stmtCheck = $db->prepare($sqlCheck);
             $stmtCheck->execute($paramsCheck);
-            $exists = (int)$stmtCheck->fetchColumn();
-            if ($exists > 0) {
-                // Se for alteração de etapa do card no CRM (Kanban), resolvemos o chamado anterior
+            $existingChamado = $stmtCheck->fetch();
+            
+            if ($existingChamado) {
+                // Se a mensagem do novo evento for a mesma do chamado ativo existente,
+                // significa que é apenas um webhook duplicado para a mesma ação (ex: STEP_CHANGE + UPDATE).
+                // Nesse caso, apenas unificamos sem gerar novos chamados ou excluir o atual.
+                if ($mensagem === $existingChamado['mensagem']) {
+                    enviarRespostaELog(200, true, "Chamado ativo já existente com a mesma mensagem. Evento unificado sem alterações.", null, $dadosBrutos, $dados, (int)$empresaId);
+                }
+
+                // Se for alteração de etapa do card no CRM (Kanban) para uma nova etapa, resolvemos o chamado anterior
                 // para que o novo estágio seja inserido e gere um novo alerta visual/sonoro atualizado.
                 if ($eventType === 'PANEL_CARD_STEP_CHANGE' || $eventType === 'PANEL_CARD_UPDATE') {
                     $sqlResolve = "UPDATE chamados SET status = 'resolvido' WHERE status IN ('pendente', 'aguardando') AND empresa_id = :empresa_id AND (";
