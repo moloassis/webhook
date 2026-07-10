@@ -290,11 +290,7 @@ if ($criarChamadoAtivo) {
             $exists = (int)$stmtCheck->fetchColumn();
             if ($exists > 0) {
                 // Já existe um chamado ativo para este cliente. Unifica ignorando a criação do segundo card duplicado.
-                echo json_encode([
-                    'sucesso' => true,
-                    'mensagem' => 'Chamado ativo já existente para este cliente. Evento unificado com sucesso.'
-                ], JSON_UNESCAPED_UNICODE);
-                exit;
+                enviarRespostaELog(200, true, "Chamado ativo já existente para este cliente. Evento unificado com sucesso.", null, $dadosBrutos, $dados, (int)$empresaId);
             }
         }
 
