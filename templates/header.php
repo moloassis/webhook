@@ -76,96 +76,246 @@ $corSecundariaGlow = hex2rgba($corSecundaria, 0.4);
 
         /* Estilos do Tema Claro (Light Mode) */
         body.light-mode {
-            --bg-gradient: linear-gradient(135deg, #f5f6fa 0%, #dfe4ea 100%);
-            --panel-bg: rgba(255, 255, 255, 0.85);
-            --card-bg: rgba(255, 255, 255, 0.95);
+            --bg-gradient: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            --panel-bg: rgba(255, 255, 255, 0.95);
+            --card-bg: #ffffff;
             --border-color: rgba(0, 0, 0, 0.08);
-            --text-primary: #2f3542;
-            --text-secondary: #747d8c;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
         }
 
         body.light-mode h1,
+        body.light-mode h2,
+        body.light-mode h3,
         body.light-mode .panel-title,
-        body.light-mode .label-text,
         body.light-mode .metric-value,
         body.light-mode .metric-label {
             background: none !important;
             -webkit-text-fill-color: initial !important;
-            color: var(--text-primary) !important;
+            color: #0f172a !important;
+        }
+
+        body.light-mode .label-text {
+            color: #475569;
         }
 
         body.light-mode header {
-            background: rgba(255, 255, 255, 0.9) !important;
+            background: rgba(255, 255, 255, 0.92) !important;
+            border-bottom-color: rgba(0, 0, 0, 0.08) !important;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04) !important;
         }
 
         body.light-mode .logo-header h1 {
             background: none !important;
             -webkit-text-fill-color: initial !important;
-            color: var(--text-primary) !important;
+            color: #0f172a !important;
         }
 
         body.light-mode .btn-view-logs {
-            background: rgba(0, 0, 0, 0.03) !important;
-            color: var(--text-primary) !important;
+            background: rgba(0, 0, 0, 0.04) !important;
+            border-color: rgba(0, 0, 0, 0.1) !important;
+            color: #1e293b !important;
         }
 
         body.light-mode .btn-view-logs:hover {
-            background: rgba(0, 0, 0, 0.06) !important;
+            background: rgba(0, 0, 0, 0.08) !important;
+            color: #0f172a !important;
         }
 
+        /* Formulários e Inputs no Tema Claro */
         body.light-mode .form-control,
-        body.light-mode input,
+        body.light-mode input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
         body.light-mode select,
         body.light-mode textarea {
-            background: rgba(255, 255, 255, 0.95) !important;
-            color: var(--text-primary) !important;
-            border-color: rgba(0, 0, 0, 0.15) !important;
+            background: #ffffff !important;
+            color: #0f172a !important;
+            border: 1px solid #cbd5e1 !important;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03) !important;
         }
         
         body.light-mode .form-control:focus,
-        body.light-mode input:focus,
+        body.light-mode input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):focus,
         body.light-mode select:focus,
         body.light-mode textarea:focus {
             border-color: var(--color-default) !important;
-            box-shadow: 0 0 5px rgba(30, 144, 255, 0.25) !important;
+            box-shadow: 0 0 0 3px rgba(30, 144, 255, 0.15) !important;
         }
         
         body.light-mode .form-control option,
         body.light-mode select option {
             background-color: #ffffff !important;
-            color: var(--text-primary) !important;
+            color: #0f172a !important;
         }
         
         body.light-mode ::placeholder,
         body.light-mode .form-control::placeholder,
         body.light-mode input::placeholder,
         body.light-mode textarea::placeholder {
-            color: #a4b0be !important;
+            color: #94a3b8 !important;
             opacity: 1 !important;
         }
-        
+
+        /* Range Slider no Tema Claro */
+        body.light-mode input[type="range"].range-slider,
+        body.light-mode .range-slider {
+            background: #cbd5e1 !important;
+            border-radius: 3px;
+        }
+
+        /* Toggle Switch no Tema Claro */
+        body.light-mode .slider {
+            background-color: #cbd5e1 !important;
+        }
+
+        body.light-mode input:checked + .slider {
+            background-color: var(--color-lead) !important;
+        }
+
+        /* Sidebar & Botões de Abas de Configurações no Tema Claro */
+        body.light-mode .settings-sidebar {
+            background: #ffffff !important;
+            border-color: rgba(0, 0, 0, 0.08) !important;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04) !important;
+        }
+
+        body.light-mode .settings-tab-btn {
+            color: #475569 !important;
+        }
+
+        body.light-mode .settings-tab-btn .tab-title {
+            color: #1e293b !important;
+        }
+
+        body.light-mode .settings-tab-btn .tab-desc {
+            color: #64748b !important;
+        }
+
+        body.light-mode .settings-tab-btn:hover {
+            background: rgba(0, 0, 0, 0.03) !important;
+            color: #0f172a !important;
+        }
+
+        body.light-mode .settings-tab-btn.active {
+            background: #f8fafc !important;
+            border-color: var(--color-default) !important;
+            color: #0f172a !important;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06), inset 0 0 0 1px var(--color-default-glow) !important;
+        }
+
+        body.light-mode .settings-tab-btn.active .tab-title {
+            color: var(--color-default) !important;
+            font-weight: 700 !important;
+        }
+
+        body.light-mode .settings-tab-btn.active .tab-desc {
+            color: #334155 !important;
+        }
+
+        /* Painel e Conteúdo no Tema Claro */
+        body.light-mode .panel-box {
+            background: #ffffff !important;
+            border-color: rgba(0, 0, 0, 0.08) !important;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04) !important;
+        }
+
+        /* Botões Especiais no Tema Claro */
+        body.light-mode .btn-premium,
+        body.light-mode #btnTestSound {
+            background: #f1f5f9 !important;
+            border: 1px solid #cbd5e1 !important;
+            color: #1e293b !important;
+            font-weight: 600 !important;
+        }
+
+        body.light-mode .btn-premium:hover,
+        body.light-mode #btnTestSound:hover {
+            background: #e2e8f0 !important;
+            border-color: var(--color-default) !important;
+            color: #0f172a !important;
+        }
+
+        body.light-mode .btn-inspect {
+            background: rgba(0, 0, 0, 0.04) !important;
+            border-color: rgba(0, 0, 0, 0.12) !important;
+            color: #1e293b !important;
+        }
+
+        body.light-mode .btn-inspect:hover {
+            background: rgba(0, 0, 0, 0.08) !important;
+        }
+
+        /* Sub-containers de itens (como lista de sons e lista de membros) */
+        body.light-mode div[style*="background: rgba(255,255,255"] {
+            background: #f8fafc !important;
+            border-color: rgba(0, 0, 0, 0.08) !important;
+        }
+
+        /* Cards de Alerta no Tema Claro */
+        body.light-mode .alert-card {
+            background: #ffffff !important;
+            border-color: rgba(0, 0, 0, 0.08) !important;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03) !important;
+        }
+
         body.light-mode .alert-card:hover {
             background: #ffffff !important;
-            border-color: rgba(0, 0, 0, 0.12) !important;
+            border-color: rgba(0, 0, 0, 0.15) !important;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06) !important;
         }
-        
-        body.light-mode #pwaInstallPanel {
-            background: linear-gradient(135deg, rgba(30, 144, 255, 0.06), rgba(255, 255, 255, 0.85)) !important;
-            border-color: rgba(30, 144, 255, 0.22) !important;
+
+        /* Tabela de Webhooks no Tema Claro */
+        body.light-mode .webhook-table th {
+            background: #f8fafc !important;
+            color: #1e293b !important;
+            border-bottom-color: rgba(0, 0, 0, 0.08) !important;
         }
-        
+
+        body.light-mode .webhook-table tr:hover {
+            background: #f1f5f9 !important;
+        }
+
+        body.light-mode .webhook-table td {
+            border-bottom-color: rgba(0, 0, 0, 0.05) !important;
+            color: #334155 !important;
+        }
+
+        /* Tabs de Filtro no Dashboard */
+        body.light-mode .filter-tabs .tab {
+            background: rgba(0, 0, 0, 0.03) !important;
+            border-color: rgba(0, 0, 0, 0.08) !important;
+            color: #475569 !important;
+        }
+
+        body.light-mode .filter-tabs .tab:hover {
+            background: rgba(0, 0, 0, 0.06) !important;
+            color: #0f172a !important;
+        }
+
+        body.light-mode .filter-tabs .tab.active {
+            background: #ffffff !important;
+            border-color: var(--color-default) !important;
+            color: var(--color-default) !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+        }
+
+        /* PWA Banner no Tema Claro */
+        body.light-mode #pwaInstallPanel {
+            background: linear-gradient(135deg, rgba(30, 144, 255, 0.08), #ffffff) !important;
+            border-color: rgba(30, 144, 255, 0.25) !important;
+        }
+
         body.light-mode #pwaInstallPanel .panel-title {
             color: #0066cc !important;
         }
-        
-        body.light-mode .webhook-table th {
-            background: rgba(0, 0, 0, 0.02) !important;
-            color: var(--text-primary) !important;
+
+        /* Audio Banner */
+        body.light-mode .audio-banner {
+            background: linear-gradient(135deg, rgba(255, 165, 2, 0.1), rgba(255, 71, 87, 0.1)) !important;
+            border-color: rgba(255, 165, 2, 0.4) !important;
         }
-        
-        body.light-mode .webhook-table tr:hover {
-            background: rgba(0, 0, 0, 0.01) !important;
+
+        body.light-mode .audio-banner-text {
+            color: #d97706 !important;
         }
     </style>
 

@@ -10,10 +10,14 @@ require_once __DIR__ . '/../helpers/tenant_context.php';
 $empresaId = (int)$_SESSION['tenant_ativo_id'];
 $isAdmin = ($_SESSION['usuario_role'] === 'admin' || $_SESSION['usuario_role'] === 'superadmin');
 
-// Diretório de áudios
-$audioDir = __DIR__ . '/../assets/audio/';
+// Diretório de uploads de áudio e logotipos
+$audioDir = __DIR__ . '/../uploads/audio/';
 if (!is_dir($audioDir)) {
     mkdir($audioDir, 0755, true);
+}
+$logoDir = __DIR__ . '/../uploads/logos/';
+if (!is_dir($logoDir)) {
+    mkdir($logoDir, 0755, true);
 }
 
 // 0. Renderizar apenas a biblioteca de sons via AJAX GET
@@ -98,7 +102,7 @@ if (isset($_GET['render_library']) && $_SERVER['REQUEST_METHOD'] === 'GET') {
                         <?php endif; ?>
                     </div>
                 </div>
-                <audio controls style="width: 100%; height: 32px; background: none;" src="assets/audio/<?= htmlspecialchars($audioFile) ?>"></audio>
+                <audio controls style="width: 100%; height: 32px; background: none;" src="uploads/audio/<?= htmlspecialchars($audioFile) ?>"></audio>
             </div>
         <?php endforeach; ?>
     <?php endif; ?>
@@ -326,9 +330,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $audioLead = isset($_POST['audio_lead']) ? trim($_POST['audio_lead']) : 'default';
             $audioDefault = isset($_POST['audio_default']) ? trim($_POST['audio_default']) : 'default';
             
-            $valSuporte = ($audioSuporte === 'default') ? 'assets/audio/notificacao.mp3' : 'assets/audio/' . basename($audioSuporte);
-            $valLead = ($audioLead === 'default') ? 'assets/audio/notificacao.mp3' : 'assets/audio/' . basename($audioLead);
-            $valDefault = ($audioDefault === 'default') ? 'assets/audio/notificacao.mp3' : 'assets/audio/' . basename($audioDefault);
+            $valSuporte = ($audioSuporte === 'default') ? 'assets/audio/notificacao.mp3' : 'uploads/audio/' . basename($audioSuporte);
+            $valLead = ($audioLead === 'default') ? 'assets/audio/notificacao.mp3' : 'uploads/audio/' . basename($audioLead);
+            $valDefault = ($audioDefault === 'default') ? 'assets/audio/notificacao.mp3' : 'uploads/audio/' . basename($audioDefault);
 
             $s1 = salvarConfiguracao('audio_alerta_suporte', $valSuporte, $empresaId);
             $s2 = salvarConfiguracao('audio_alerta_lead', $valLead, $empresaId);
@@ -359,7 +363,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $dest_path = $audioDir . $newFileName;
 
                         if (move_uploaded_file($fileTmpPath, $dest_path)) {
-                            salvarConfiguracao('audio_alerta', 'assets/audio/' . $newFileName, $empresaId);
+                            salvarConfiguracao('audio_alerta', 'uploads/audio/' . $newFileName, $empresaId);
                             $statusQuery = 'success=' . urlencode('Áudio enviado e ativado com sucesso!');
                         } else {
                             $statusQuery = 'error=' . urlencode('Erro ao salvar o arquivo no servidor.');
@@ -384,7 +388,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 salvarConfiguracao('audio_alerta', 'assets/audio/notificacao.mp3', $empresaId);
                 $statusQuery = 'success=' . urlencode('Áudio padrão do sistema ativado!');
             } elseif ($selectedFile && file_exists($audioDir . $selectedFile)) {
-                salvarConfiguracao('audio_alerta', 'assets/audio/' . $selectedFile, $empresaId);
+                salvarConfiguracao('audio_alerta', 'uploads/audio/' . $selectedFile, $empresaId);
                 $statusQuery = 'success=' . urlencode('Áudio customizado ativado com sucesso!');
             } else {
                 $statusQuery = 'error=' . urlencode('Arquivo de áudio não encontrado.');
@@ -398,7 +402,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             if ($fileToDelete && $fileToDelete !== 'notificacao.mp3' && file_exists($audioDir . $fileToDelete)) {
                 $somAtivo = obterConfiguracao('audio_alerta', 'assets/audio/notificacao.mp3', $empresaId);
-                if ($somAtivo === 'assets/audio/' . $fileToDelete) {
+                if ($somAtivo === 'uploads/audio/' . $fileToDelete || $somAtivo === 'assets/audio/' . $fileToDelete) {
                     salvarConfiguracao('audio_alerta', 'assets/audio/notificacao.mp3', $empresaId);
                 }
                 unlink($audioDir . $fileToDelete);
@@ -421,7 +425,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 // Processa upload da logo se houver
                 if (isset($_FILES['logo_file']) && $_FILES['logo_file']['error'] === UPLOAD_ERR_OK) {
-                    $logoDir = __DIR__ . '/../assets/img/logos/';
                     if (!is_dir($logoDir)) {
                         mkdir($logoDir, 0755, true);
                     }
@@ -441,7 +444,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 unlink(__DIR__ . '/../' . $oldLogo);
                             }
                             
-                            $logoPathDb = 'assets/img/logos/' . $newLogoName;
+                            $logoPathDb = 'uploads/logos/' . $newLogoName;
                             $stmtL = $db->prepare("UPDATE tenants SET logo_path = :logo WHERE id = :id");
                             $stmtL->execute([':logo' => $logoPathDb, ':id' => $empresaId]);
                         }
