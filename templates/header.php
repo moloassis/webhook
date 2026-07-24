@@ -398,12 +398,14 @@ $corSecundariaGlow = hex2rgba($corSecundaria, 0.4);
                 onmouseout="<?php echo ($currentView === 'dashboard') ? '' : "this.style.borderColor='var(--border-color)';"; ?>">
                 📊 Dashboard
             </a>
-            <a href="t/<?php echo $tenantSlug; ?>/logs" class="btn-view-logs"
-                style="<?php echo ($currentView === 'logs') ? 'background: rgba(30, 144, 255, 0.15); border-color: var(--color-default); font-weight: 600;' : ''; ?>"
-                onmouseover="this.style.borderColor='var(--color-default)';"
-                onmouseout="<?php echo ($currentView === 'logs') ? '' : "this.style.borderColor='var(--border-color)';"; ?>">
-                🔍 Webhooks
-            </a>
+            <?php if (isset($_SESSION['usuario_role']) && in_array($_SESSION['usuario_role'], ['admin', 'superadmin'])): ?>
+                <a href="t/<?php echo $tenantSlug; ?>/logs" class="btn-view-logs"
+                    style="<?php echo ($currentView === 'logs') ? 'background: rgba(30, 144, 255, 0.15); border-color: var(--color-default); font-weight: 600;' : ''; ?>"
+                    onmouseover="this.style.borderColor='var(--color-default)';"
+                    onmouseout="<?php echo ($currentView === 'logs') ? '' : "this.style.borderColor='var(--border-color)';"; ?>">
+                    🔍 Webhooks
+                </a>
+            <?php endif; ?>
             <a href="t/<?php echo $tenantSlug; ?>/settings" class="btn-view-logs"
                 style="<?php echo ($currentView === 'settings' || $currentView === 'configuracoes') ? 'background: rgba(30, 144, 255, 0.15); border-color: var(--color-default); font-weight: 600;' : ''; ?>"
                 onmouseover="this.style.borderColor='var(--color-default)';"

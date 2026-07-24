@@ -7,6 +7,9 @@
 require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../helpers/tenant_context.php';
 
+// Apenas administradores e superadmins possuem acesso aos logs técnicos de webhooks
+exigirRole(['admin', 'superadmin']);
+
 $empresaId = (int)$_SESSION['tenant_ativo_id'];
 
 $erroLimpar = '';
