@@ -173,6 +173,8 @@ $corSecundariaGlow = hex2rgba($corSecundaria, 0.4);
     <script>
         window.SYSTEM_CONFIG = {
             audioAlerta: "<?php echo htmlspecialchars(obterConfiguracao('audio_alerta', 'assets/audio/notificacao.mp3'), ENT_QUOTES, 'UTF-8'); ?>",
+            audioAlertaSuporte: "<?php echo htmlspecialchars(obterConfiguracao('audio_alerta_suporte', 'assets/audio/notificacao.mp3'), ENT_QUOTES, 'UTF-8'); ?>",
+            audioAlertaLead: "<?php echo htmlspecialchars(obterConfiguracao('audio_alerta_lead', 'assets/audio/notificacao.mp3'), ENT_QUOTES, 'UTF-8'); ?>",
             limiteLogs: <?php echo (int) obterConfiguracao('limite_logs', 100); ?>,
             jwtToken: "<?php echo $_SESSION['jwt_token'] ?? ''; ?>",
             tenantSlug: "<?php echo htmlspecialchars($tenantSlug, ENT_QUOTES, 'UTF-8'); ?>",

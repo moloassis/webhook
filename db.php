@@ -5,8 +5,12 @@
 
 require_once __DIR__ . '/config.php';
 
-function obterConexao(): PDO {
+function obterConexao(bool $forcarReconexao = false): PDO {
     static $pdo = null;
+
+    if ($forcarReconexao) {
+        $pdo = null;
+    }
 
     if ($pdo === null) {
         try {
@@ -70,6 +74,21 @@ function obterConexao(): PDO {
                     `ip` VARCHAR(45) NOT NULL,
                     `criado_em` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     CONSTRAINT `fk_auditoria_usuario` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+            } catch (Exception $e) {
+                // Silenciosamente ignora
+            }
+
+            // Auto-migração/Self-healing para criar a tabela de fila de push
+            try {
+                $pdo->exec("CREATE TABLE IF NOT EXISTS `push_queue` (
+                    `id` INT AUTO_INCREMENT PRIMARY KEY,
+                    `empresa_id` INT NOT NULL,
+                    `payload` TEXT NOT NULL,
+                    `status` VARCHAR(20) NOT NULL DEFAULT 'pendente',
+                    `tentativas` INT NOT NULL DEFAULT 0,
+                    `criado_em` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    CONSTRAINT `fk_push_queue_empresa` FOREIGN KEY (`empresa_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
             } catch (Exception $e) {
                 // Silenciosamente ignora

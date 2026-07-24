@@ -174,9 +174,16 @@
             const habilitado = !audioMuted;
             if (!habilitado) return;
 
-            const audioSrc = (window.SYSTEM_CONFIG && window.SYSTEM_CONFIG.audioAlerta)
-                ? window.SYSTEM_CONFIG.audioAlerta
-                : 'assets/audio/notificacao.mp3';
+            let audioSrc = 'assets/audio/notificacao.mp3';
+            if (window.SYSTEM_CONFIG) {
+                if (tipo === 'atendimento_humano' && window.SYSTEM_CONFIG.audioAlertaSuporte) {
+                    audioSrc = window.SYSTEM_CONFIG.audioAlertaSuporte;
+                } else if (tipo === 'novo_lead' && window.SYSTEM_CONFIG.audioAlertaLead) {
+                    audioSrc = window.SYSTEM_CONFIG.audioAlertaLead;
+                } else if (window.SYSTEM_CONFIG.audioAlerta) {
+                    audioSrc = window.SYSTEM_CONFIG.audioAlerta;
+                }
+            }
 
             const mp3 = new Audio(audioSrc);
             

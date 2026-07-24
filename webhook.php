@@ -89,20 +89,6 @@ if (empty($token)) {
     enviarRespostaELogSemEmpresa(401, false, 'Token do webhook não fornecido.');
 }
 
-try {
-    $db = obterConexao();
-    $stmt = $db->prepare("SELECT id FROM tenants WHERE webhook_token = :token");
-    $stmt->execute([':token' => $token]);
-    $empresaId = $stmt->fetchColumn();
-
-    if (!$empresaId) {
-        enviarRespostaELogSemEmpresa(403, false, 'Token do webhook inválido ou inativo.');
-    }
-} catch (Exception $e) {
-    registrarErro("Erro ao validar token de webhook: " . $e->getMessage());
-    enviarRespostaELogSemEmpresa(500, false, 'Erro interno ao processar webhook.');
-}
-
 // 2. Capturar os dados enviados (suporta JSON ou $_POST convencional)
 $dadosBrutos = file_get_contents('php://input');
 $dados = json_decode($dadosBrutos, true);
@@ -110,6 +96,34 @@ $dados = json_decode($dadosBrutos, true);
 // Se não for JSON válido, tenta pegar via POST tradicional (form-urlencoded)
 if (json_last_error() !== JSON_ERROR_NONE || empty($dados)) {
     $dados = $_POST;
+}
+
+try {
+    $db = obterConexao();
+    $stmt = $db->prepare("SELECT id, webhook_token FROM tenants WHERE webhook_token = :token");
+    $stmt->execute([':token' => $token]);
+    $tenant = $stmt->fetch();
+
+    if (!$tenant) {
+        enviarRespostaELogSemEmpresa(403, false, 'Token do webhook inválido ou inativo.');
+    }
+    
+    $empresaId = (int)$tenant['id'];
+
+    // Validação de assinatura digital opcional (HMAC-SHA256)
+    $signature = $_SERVER['HTTP_X_HUB_SIGNATURE_256'] ?? $_SERVER['HTTP_X_SIGNATURE'] ?? '';
+    if (!empty($signature)) {
+        if (strpos($signature, 'sha256=') === 0) {
+            $signature = substr($signature, 7);
+        }
+        $expectedSignature = hash_hmac('sha256', $dadosBrutos, $tenant['webhook_token']);
+        if (!hash_equals($expectedSignature, $signature)) {
+            enviarRespostaELogSemEmpresa(403, false, 'Assinatura digital do webhook inválida.');
+        }
+    }
+} catch (Exception $e) {
+    registrarErro("Erro ao validar token/assinatura de webhook: " . $e->getMessage());
+    enviarRespostaELogSemEmpresa(500, false, 'Erro interno ao processar webhook.');
 }
 
 // --- INSPEÇÃO/LOG EM ARQUIVO LOCAL (MANTIDO COMO BACKUP) ---
@@ -170,6 +184,13 @@ if ($eventType) {
                         ':session_id' => $sessionId,
                         ':empresa_id' => (int)$empresaId
                     ]);
+
+                    // Notifica SSE atualizando o arquivo flag
+                    $flagDir = __DIR__ . '/flags';
+                    if (!is_dir($flagDir)) {
+                        mkdir($flagDir, 0755, true);
+                    }
+                    touch($flagDir . "/update_{$empresaId}.txt");
                 } catch (Exception $e) {
                     registrarErro("Erro ao fechar chamado por MESSAGE_SENT: " . $e->getMessage());
                 }
@@ -304,6 +325,13 @@ if ($criarChamadoAtivo) {
                     $sqlResolve .= implode(" OR ", $conds) . ")";
                     $stmtResolve = $db->prepare($sqlResolve);
                     $stmtResolve->execute($paramsCheck);
+
+                    // Notifica SSE atualizando o arquivo flag
+                    $flagDir = __DIR__ . '/flags';
+                    if (!is_dir($flagDir)) {
+                        mkdir($flagDir, 0755, true);
+                    }
+                    touch($flagDir . "/update_{$empresaId}.txt");
                 } else {
                     // Já existe um chamado ativo para este cliente. Unifica ignorando a criação do segundo card duplicado.
                     enviarRespostaELog(200, true, "Chamado ativo já existente para este cliente. Evento unificado com sucesso.", null, $dadosBrutos, $dados, (int)$empresaId);
@@ -333,6 +361,13 @@ if ($criarChamadoAtivo) {
                 'status' => 'pendente'
             ];
 
+            // Notifica SSE atualizando o arquivo flag
+            $flagDir = __DIR__ . '/flags';
+            if (!is_dir($flagDir)) {
+                mkdir($flagDir, 0755, true);
+            }
+            touch($flagDir . "/update_{$empresaId}.txt");
+
             // Envia notificações push em segundo plano para os atendentes inscritos
             enviarPushNotificacoes($nomeCliente, $tipoEvent, $mensagem, $sessionId, (int)$empresaId);
 
@@ -353,23 +388,11 @@ if ($criarChamadoAtivo) {
 }
 
 /**
- * Envia notificações push para todos os navegadores/celulares inscritos.
+ * Enfileira notificações push na tabela push_queue para processamento assíncrono.
  */
 function enviarPushNotificacoes(?string $nomeCliente, string $tipo, ?string $mensagem, ?string $sessionId, int $empresaId): void
 {
     try {
-        $db = obterConexao();
-        $stmt = $db->prepare("SELECT p.id, p.endpoint, p.keys_p256dh, p.keys_auth 
-                               FROM pwa_subscriptions p
-                               JOIN usuarios u ON p.usuario_id = u.id
-                               WHERE u.empresa_id = :empresa_id");
-        $stmt->execute([':empresa_id' => $empresaId]);
-        $inscricoes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        if (empty($inscricoes)) {
-            return; // Nenhuma inscrição registrada no banco
-        }
-        
         // Define o título e mensagem amigáveis para a notificação
         $titulo = "🚨 Atendimento Humano Requerido";
         $mensagemPush = "Cliente: " . ($nomeCliente ?? 'Desconhecido');
@@ -400,64 +423,19 @@ function enviarPushNotificacoes(?string $nomeCliente, string $tipo, ?string $men
             }
         }
 
-        // Configuração de autenticação VAPID
-        $auth = [
-            'VAPID' => [
-                'subject' => VAPID_SUBJECT,
-                'publicKey' => VAPID_PUBLIC_KEY,
-                'privateKey' => VAPID_PRIVATE_KEY,
-            ],
-        ];
+        $db = obterConexao();
+        $payload = json_encode([
+            'titulo' => $titulo,
+            'mensagem' => $mensagemPush,
+            'url' => $urlRedirect
+        ], JSON_UNESCAPED_UNICODE);
 
-        // Instancia a classe de disparo da biblioteca minishlink/web-push
-        $webPush = new \Minishlink\WebPush\WebPush($auth);
-        
-        // Adiciona à fila de disparo para cada assinatura ativa
-        foreach ($inscricoes as $ins) {
-            $webPush->queueNotification(
-                \Minishlink\WebPush\Subscription::create([
-                    'endpoint' => $ins['endpoint'],
-                    'publicKey' => $ins['keys_p256dh'],
-                    'authToken' => $ins['keys_auth'],
-                ]),
-                json_encode([
-                    'titulo' => $titulo,
-                    'mensagem' => $mensagemPush,
-                    'url' => $urlRedirect
-                ], JSON_UNESCAPED_UNICODE)
-            );
-        }
-
-        // Executa os envios em paralelo e limpa endpoints inválidos (desinstalados)
-        $idsParaRemover = [];
-        foreach ($webPush->flush() as $report) {
-            if (!$report->isSuccess()) {
-                $response = $report->getResponse();
-                $statusCode = $response ? $response->getStatusCode() : null;
-                
-                // Código 410 (Gone) ou 404 (Not Found) indica que o app foi desinstalado ou permissão revogada
-                if ($statusCode === 410 || $statusCode === 404) {
-                    $endpointUrl = $report->getRequest()->getUri()->__toString();
-                    foreach ($inscricoes as $ins) {
-                        if ($ins['endpoint'] === $endpointUrl) {
-                            $idsParaRemover[] = $ins['id'];
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        // Limpa inscrições inválidas do banco para evitar desperdício de requisições
-        if (!empty($idsParaRemover)) {
-            $placeholders = implode(',', array_fill(0, count($idsParaRemover), '?'));
-            $sqlDelete = "DELETE FROM pwa_subscriptions WHERE id IN ($placeholders)";
-            $stmtDel = $db->prepare($sqlDelete);
-            $stmtDel->execute($idsParaRemover);
-            registrarErro("Inscrições de Web Push inativas removidas em lote: " . implode(', ', $idsParaRemover));
-        }
-
+        $stmt = $db->prepare("INSERT INTO push_queue (empresa_id, payload, status, tentativas, criado_em) VALUES (:empresa_id, :payload, 'pendente', 0, NOW())");
+        $stmt->execute([
+            ':empresa_id' => $empresaId,
+            ':payload' => $payload
+        ]);
     } catch (Exception $e) {
-        registrarErro("Falha catastrófica ao processar Web Push: " . $e->getMessage());
+        registrarErro("Falha ao enfileirar Web Push: " . $e->getMessage());
     }
 }

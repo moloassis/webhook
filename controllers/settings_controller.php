@@ -189,17 +189,110 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
     
-    // Segurança: Apenas Administradores alteram as configurações do tenant
-    if (!$isAdmin) {
-        http_response_code(403);
-        if (isset($_POST['ajax'])) {
-            header('Content-Type: application/json; charset=utf-8');
-            echo json_encode(['success' => false, 'message' => 'Permissão negada. Apenas administradores podem salvar configurações.']);
-            exit;
-        }
-        $statusQuery = 'error=' . urlencode('Permissão negada.');
-    } else {
         $action = isset($_POST['action']) ? $_POST['action'] : '';
+
+        // AÇÃO: Atualizar Perfil do Usuário (disponível para todos os usuários logados)
+        if ($action === 'update_profile') {
+            $uId = (int)$_SESSION['usuario_id'];
+            $uNome = isset($_POST['usuario_nome']) ? trim($_POST['usuario_nome']) : '';
+            $uEmail = isset($_POST['usuario_email']) ? trim($_POST['usuario_email']) : '';
+            $senhaAtual = isset($_POST['senha_atual']) ? $_POST['senha_atual'] : '';
+            $novaSenha = isset($_POST['nova_senha']) ? $_POST['nova_senha'] : '';
+            $confirmarSenha = isset($_POST['confirmar_senha']) ? $_POST['confirmar_senha'] : '';
+
+            if (!$uNome || !$uEmail) {
+                $statusQuery = 'error=' . urlencode('Preencha os campos Nome e E-mail.');
+            } elseif (!filter_var($uEmail, FILTER_VALIDATE_EMAIL)) {
+                $statusQuery = 'error=' . urlencode('Formato de e-mail inválido.');
+            } else {
+                try {
+                    $db = obterConexao();
+
+                    // 1. Busca os dados atuais do usuário no banco
+                    $stmtUser = $db->prepare("SELECT * FROM usuarios WHERE id = :id");
+                    $stmtUser->execute([':id' => $uId]);
+                    $usuarioAtual = $stmtUser->fetch();
+
+                    if (!$usuarioAtual) {
+                        $statusQuery = 'error=' . urlencode('Usuário não encontrado.');
+                    } else {
+                        // 2. Verifica se o novo e-mail já pertence a outro usuário
+                        $stmtCheckEmail = $db->prepare("SELECT COUNT(*) FROM usuarios WHERE email = :email AND id != :id");
+                        $stmtCheckEmail->execute([':email' => $uEmail, ':id' => $uId]);
+                        if ($stmtCheckEmail->fetchColumn() > 0) {
+                            $statusQuery = 'error=' . urlencode('Este endereço de e-mail já está sendo utilizado por outro usuário.');
+                        } else {
+                            $trocarSenha = !empty($novaSenha) || !empty($confirmarSenha) || !empty($senhaAtual);
+                            $sucesso = false;
+
+                            if ($trocarSenha) {
+                                // Validações para alteração de senha
+                                if (empty($senhaAtual)) {
+                                    $statusQuery = 'error=' . urlencode('Informe a sua senha atual para autorizar a alteração.');
+                                } elseif (!password_verify($senhaAtual, $usuarioAtual['senha_hash'])) {
+                                    $statusQuery = 'error=' . urlencode('A senha atual informada está incorreta.');
+                                } elseif ($novaSenha !== $confirmarSenha) {
+                                    $statusQuery = 'error=' . urlencode('A nova senha e a confirmação de senha não coincidem.');
+                                } else {
+                                    require_once __DIR__ . '/../helpers/security.php';
+                                    $erroForca = validarForcaSenha($novaSenha);
+                                    if ($erroForca) {
+                                        $statusQuery = 'error=' . urlencode($erroForca);
+                                    } else {
+                                        $novaSenhaHash = password_hash($novaSenha, PASSWORD_DEFAULT);
+                                        $stmtUpdate = $db->prepare("UPDATE usuarios SET nome = :nome, email = :email, senha_hash = :senha_hash WHERE id = :id");
+                                        $sucesso = $stmtUpdate->execute([
+                                            ':nome' => $uNome,
+                                            ':email' => $uEmail,
+                                            ':senha_hash' => $novaSenhaHash,
+                                            ':id' => $uId
+                                        ]);
+                                    }
+                                }
+                            } else {
+                                // Apenas atualiza nome e e-mail
+                                $stmtUpdate = $db->prepare("UPDATE usuarios SET nome = :nome, email = :email WHERE id = :id");
+                                $sucesso = $stmtUpdate->execute([
+                                    ':nome' => $uNome,
+                                    ':email' => $uEmail,
+                                    ':id' => $uId
+                                ]);
+                            }
+
+                            if ($sucesso) {
+                                $_SESSION['usuario_nome'] = $uNome;
+                                $_SESSION['usuario_email'] = $uEmail;
+
+                                // Recalcula token JWT
+                                require_once __DIR__ . '/../helpers/jwt.php';
+                                $payload = [
+                                    'usuario_id' => $uId,
+                                    'empresa_id' => $_SESSION['empresa_id'] ? (int)$_SESSION['empresa_id'] : null,
+                                    'role' => $_SESSION['usuario_role']
+                                ];
+                                $_SESSION['jwt_token'] = JWT::encode($payload, JWT_SECRET);
+
+                                $statusQuery = 'success=' . urlencode('Perfil atualizado com sucesso!');
+                            } elseif (empty($statusQuery)) {
+                                $statusQuery = 'error=' . urlencode('Erro ao atualizar os dados do perfil.');
+                            }
+                        }
+                    }
+                } catch (Exception $e) {
+                    $statusQuery = 'error=' . urlencode('Erro interno ao atualizar perfil: ' . $e->getMessage());
+                }
+            }
+        }
+        // Segurança: Apenas Administradores alteram as demais configurações do tenant
+        elseif (!$isAdmin) {
+            http_response_code(403);
+            if (isset($_POST['ajax'])) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'message' => 'Permissão negada. Apenas administradores podem salvar configurações.']);
+                exit;
+            }
+            $statusQuery = 'error=' . urlencode('Permissão negada.');
+        } else {
 
         // AÇÃO: Salvar Configurações Gerais
         if ($action === 'save_general') {
@@ -207,10 +300,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($limite < 1) $limite = 1;
             if ($limite > 1000) $limite = 1000;
 
-            if (salvarConfiguracao('limite_logs', (string)$limite, $empresaId)) {
-                $statusQuery = 'success=' . urlencode('Limite de logs atualizado com sucesso!');
+            $crmEnabled = isset($_POST['crm_integration_enabled']) ? '1' : '0';
+            $crmUrl = isset($_POST['crm_api_url']) ? trim($_POST['crm_api_url']) : '';
+            $crmKey = isset($_POST['crm_api_key']) ? trim($_POST['crm_api_key']) : '';
+            $crmEtapaAtend = isset($_POST['crm_etapa_atendimento']) ? trim($_POST['crm_etapa_atendimento']) : '';
+            $crmEtapaFin = isset($_POST['crm_etapa_finalizado']) ? trim($_POST['crm_etapa_finalizado']) : '';
+
+            $s1 = salvarConfiguracao('limite_logs', (string)$limite, $empresaId);
+            $s2 = salvarConfiguracao('crm_integration_enabled', $crmEnabled, $empresaId);
+            $s3 = salvarConfiguracao('crm_api_url', $crmUrl, $empresaId);
+            $s4 = salvarConfiguracao('crm_api_key', $crmKey, $empresaId);
+            $s5 = salvarConfiguracao('crm_etapa_atendimento', $crmEtapaAtend, $empresaId);
+            $s6 = salvarConfiguracao('crm_etapa_finalizado', $crmEtapaFin, $empresaId);
+
+            if ($s1 && $s2 && $s3 && $s4 && $s5 && $s6) {
+                $statusQuery = 'success=' . urlencode('Configurações gerais e de integração CRM salvas com sucesso!');
             } else {
-                $statusQuery = 'error=' . urlencode('Falha ao salvar limite de logs.');
+                $statusQuery = 'error=' . urlencode('Falha ao salvar as configurações.');
+            }
+        }
+
+        // AÇÃO: Salvar Mapeamento de Sons
+        elseif ($action === 'save_sound_mappings') {
+            $audioSuporte = isset($_POST['audio_suporte']) ? trim($_POST['audio_suporte']) : 'default';
+            $audioLead = isset($_POST['audio_lead']) ? trim($_POST['audio_lead']) : 'default';
+            $audioDefault = isset($_POST['audio_default']) ? trim($_POST['audio_default']) : 'default';
+            
+            $valSuporte = ($audioSuporte === 'default') ? 'assets/audio/notificacao.mp3' : 'assets/audio/' . basename($audioSuporte);
+            $valLead = ($audioLead === 'default') ? 'assets/audio/notificacao.mp3' : 'assets/audio/' . basename($audioLead);
+            $valDefault = ($audioDefault === 'default') ? 'assets/audio/notificacao.mp3' : 'assets/audio/' . basename($audioDefault);
+
+            $s1 = salvarConfiguracao('audio_alerta_suporte', $valSuporte, $empresaId);
+            $s2 = salvarConfiguracao('audio_alerta_lead', $valLead, $empresaId);
+            $s3 = salvarConfiguracao('audio_alerta', $valDefault, $empresaId); // default / fallback
+            
+            if ($s1 && $s2 && $s3) {
+                $statusQuery = 'success=' . urlencode('Mapeamento de alertas sonoros atualizado!');
+            } else {
+                $statusQuery = 'error=' . urlencode('Falha ao atualizar o mapeamento de sons.');
             }
         }
 
@@ -480,6 +607,19 @@ $limiteLogs = (int) obterConfiguracao('limite_logs', 100, $empresaId);
 $somAtivo = obterConfiguracao('audio_alerta', 'assets/audio/notificacao.mp3', $empresaId);
 $somAtivoNome = basename($somAtivo);
 
+// Granular sounds
+$somSuporte = obterConfiguracao('audio_alerta_suporte', 'assets/audio/notificacao.mp3', $empresaId);
+$somSuporteNome = basename($somSuporte);
+$somLead = obterConfiguracao('audio_alerta_lead', 'assets/audio/notificacao.mp3', $empresaId);
+$somLeadNome = basename($somLead);
+
+// CRM settings
+$crmIntegrationEnabled = obterConfiguracao('crm_integration_enabled', '0', $empresaId);
+$crmApiUrl = obterConfiguracao('crm_api_url', '', $empresaId);
+$crmApiKey = obterConfiguracao('crm_api_key', '', $empresaId);
+$crmEtapaAtendimento = obterConfiguracao('crm_etapa_atendimento', '', $empresaId);
+$crmEtapaFinalizado = obterConfiguracao('crm_etapa_finalizado', '', $empresaId);
+
 // Listar arquivos de sons customizados
 $audiosDisponiveis = [];
 if (is_dir($audioDir)) {
@@ -505,3 +645,22 @@ try {
 } catch (Exception $e) {
     $usuariosTenant = [];
 }
+
+// Carregar dados do perfil do usuário atualmente autenticado
+$usuarioPerfil = [
+    'nome' => $_SESSION['usuario_nome'] ?? '',
+    'email' => $_SESSION['usuario_email'] ?? '',
+    'role' => $_SESSION['usuario_role'] ?? 'user'
+];
+try {
+    $db = obterConexao();
+    $stmtMe = $db->prepare("SELECT id, nome, email, role, criado_em FROM usuarios WHERE id = :id");
+    $stmtMe->execute([':id' => (int)$_SESSION['usuario_id']]);
+    $meData = $stmtMe->fetch();
+    if ($meData) {
+        $usuarioPerfil = $meData;
+    }
+} catch (Exception $e) {
+    // Mantém fallback das variáveis de sessão
+}
+

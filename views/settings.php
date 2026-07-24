@@ -191,7 +191,15 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
         
         <!-- Sidebar de Navegação -->
         <div class="settings-sidebar">
-            <button type="button" class="settings-tab-btn active" data-tab="tab-preferencias">
+            <button type="button" class="settings-tab-btn active" data-tab="tab-perfil">
+                <span class="tab-icon">👤</span>
+                <div class="tab-text">
+                    <span class="tab-title">Meu Perfil</span>
+                    <span class="tab-desc">Nome, e-mail e senha</span>
+                </div>
+            </button>
+
+            <button type="button" class="settings-tab-btn" data-tab="tab-preferencias">
                 <span class="tab-icon">🔊</span>
                 <div class="tab-text">
                     <span class="tab-title">Preferências Locais</span>
@@ -237,8 +245,65 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
         <!-- Área de Conteúdo das Abas -->
         <div class="settings-content">
             
+            <!-- ABA MEU PERFIL -->
+            <div id="tab-perfil" class="settings-tab-content active">
+                <div class="panel-box" style="background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 16px; padding: 1.5rem; backdrop-filter: blur(16px);">
+                    <h3 class="panel-title" style="margin-top: 0; font-size: 1.1rem; color: var(--text-primary); margin-bottom: 1.2rem; display: flex; align-items: center; gap: 8px;">
+                        👤 Configurações do Meu Perfil
+                    </h3>
+                    
+                    <form action="<?php echo htmlspecialchars($_SERVER['REQUEST_URI'], ENT_QUOTES, 'UTF-8'); ?>" method="POST" style="display: flex; flex-direction: column; gap: 1.2rem;">
+                        <?php echo renderizarCampoCSRF(); ?>
+                        <input type="hidden" name="action" value="update_profile">
+
+                        <!-- Dados Pessoais -->
+                        <div class="form-group" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                            <label class="label-text" for="usuario_nome" style="font-size: 0.85rem; font-weight: 500;">Nome Completo</label>
+                            <input type="text" id="usuario_nome" name="usuario_nome" value="<?= htmlspecialchars($usuarioPerfil['nome'] ?? '', ENT_QUOTES, 'UTF-8') ?>" required class="form-control" style="width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.6rem; color: var(--text-primary); outline: none;">
+                        </div>
+
+                        <div class="form-group" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                            <label class="label-text" for="usuario_email" style="font-size: 0.85rem; font-weight: 500;">Endereço de E-mail</label>
+                            <input type="email" id="usuario_email" name="usuario_email" value="<?= htmlspecialchars($usuarioPerfil['email'] ?? '', ENT_QUOTES, 'UTF-8') ?>" required class="form-control" style="width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.6rem; color: var(--text-primary); outline: none;">
+                        </div>
+
+                        <!-- Divisor de Seção -->
+                        <div style="border-top: 1px solid var(--border-color); margin: 0.4rem 0;"></div>
+
+                        <!-- Alteração de Senha -->
+                        <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+                            <span class="label-text" style="font-weight: 600; font-size: 0.9rem; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+                                🔒 Alterar Senha <span style="font-weight: 400; font-size: 0.75rem; color: var(--text-secondary);">(preencha apenas se desejar alterar)</span>
+                            </span>
+
+                            <div class="form-group" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                <label class="label-text" for="senha_atual" style="font-size: 0.85rem;">Senha Atual</label>
+                                <input type="password" id="senha_atual" name="senha_atual" autocomplete="current-password" placeholder="Digite sua senha atual" class="form-control" style="width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.6rem; color: var(--text-primary); outline: none;">
+                            </div>
+
+                            <div class="form-group" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                <label class="label-text" for="nova_senha" style="font-size: 0.85rem;">Nova Senha</label>
+                                <input type="password" id="nova_senha" name="nova_senha" autocomplete="new-password" placeholder="Digite a nova senha" class="form-control" style="width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.6rem; color: var(--text-primary); outline: none;">
+                                <span class="label-text" style="font-size: 0.72rem; color: var(--text-secondary);">
+                                    A senha deve conter no mínimo 6 caracteres, incluir maiúscula, minúscula, número e caractere especial (@, #, etc.).
+                                </span>
+                            </div>
+
+                            <div class="form-group" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                <label class="label-text" for="confirmar_senha" style="font-size: 0.85rem;">Confirmar Nova Senha</label>
+                                <input type="password" id="confirmar_senha" name="confirmar_senha" autocomplete="new-password" placeholder="Repita a nova senha" class="form-control" style="width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.6rem; color: var(--text-primary); outline: none;">
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-premium" style="width: 100%; margin-top: 0.5rem; padding: 0.7rem; font-weight: 600;">
+                            Salvar Alterações do Perfil 💾
+                        </button>
+                    </form>
+                </div>
+            </div>
+
             <!-- ABA 1: Preferências Locais -->
-            <div id="tab-preferencias" class="settings-tab-content active">
+            <div id="tab-preferencias" class="settings-tab-content">
                 <div class="panel-box" style="background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 16px; padding: 1.5rem; backdrop-filter: blur(16px);">
                     <h3 class="panel-title" style="margin-top: 0; font-size: 1.1rem; color: var(--text-primary); margin-bottom: 1.2rem; display: flex; align-items: center; gap: 8px;">
                         🔊 Preferências Locais (Dispositivo)
@@ -298,9 +363,58 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
                                 Número máximo de requisições de webhook no painel de Logs.
                             </span>
                         </div>
+
+                        <!-- Integração Bidirecional CRM -->
+                        <div style="border-top: 1px solid var(--border-color); padding-top: 1.2rem; margin-top: 0.5rem; display: flex; flex-direction: column; gap: 1rem;">
+                            <h4 style="margin: 0; font-size: 0.95rem; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+                                🔄 Sincronização Bidirecional com o CRM
+                            </h4>
+                            
+                            <div class="control-row" style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <span class="label-text" style="font-weight: 500; display: block;">Habilitar Sincronização CRM</span>
+                                    <span class="label-text" style="font-size: 0.72rem; color: var(--text-secondary);">
+                                        Atualiza automaticamente o Kanban do CRM quando você atende ou dispensa alertas.
+                                    </span>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" name="crm_integration_enabled" value="1" <?= ($crmIntegrationEnabled === '1') ? 'checked' : '' ?>>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            
+                            <div class="form-group" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                <label class="label-text" for="crm_api_url" style="font-size: 0.82rem;">URL da API do CRM (Endpoint de Update)</label>
+                                <input type="url" id="crm_api_url" name="crm_api_url" class="form-control" 
+                                       value="<?= htmlspecialchars($crmApiUrl) ?>" placeholder="Ex: https://crm.meu-painel.com/api/v1/cards/update"
+                                       style="width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.6rem; color: var(--text-primary); outline: none;">
+                            </div>
+                            
+                            <div class="form-group" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                <label class="label-text" for="crm_api_key" style="font-size: 0.82rem;">Token de API/Chave Secreta do CRM</label>
+                                <input type="password" id="crm_api_key" name="crm_api_key" class="form-control" 
+                                       value="<?= htmlspecialchars($crmApiKey) ?>" placeholder="Insira o token de autorização..."
+                                       style="width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.6rem; color: var(--text-primary); outline: none;">
+                            </div>
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                <div class="form-group" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                    <label class="label-text" for="crm_etapa_atendimento" style="font-size: 0.82rem;">Etapa de Atendimento (ID)</label>
+                                    <input type="text" id="crm_etapa_atendimento" name="crm_etapa_atendimento" class="form-control" 
+                                           value="<?= htmlspecialchars($crmEtapaAtendimento) ?>" placeholder="Ex: 5"
+                                           style="width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.6rem; color: var(--text-primary); outline: none;">
+                                </div>
+                                <div class="form-group" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                    <label class="label-text" for="crm_etapa_finalizado" style="font-size: 0.82rem;">Etapa de Finalizado/Dispensado (ID)</label>
+                                    <input type="text" id="crm_etapa_finalizado" name="crm_etapa_finalizado" class="form-control" 
+                                           value="<?= htmlspecialchars($crmEtapaFinalizado) ?>" placeholder="Ex: 8"
+                                           style="width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.6rem; color: var(--text-primary); outline: none;">
+                                </div>
+                            </div>
+                        </div>
                         
                         <button type="submit" class="btn-premium" style="width: 100%; margin: 0; padding: 0.7rem; font-weight: 600;">
-                            Salvar Limite de Logs
+                            Salvar Configurações
                         </button>
                     </form>
                 </div>
@@ -414,6 +528,48 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
                             <input type="file" id="audio_file" name="audio_file" accept="audio/*" required class="form-control" style="flex: 1; font-size: 0.8rem; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); padding: 0.4rem; border-radius: 8px;">
                             <button type="submit" class="btn-premium" style="margin: 0; padding: 0.5rem 1rem; width: auto; font-size: 0.8rem;">Upload</button>
                         </div>
+                    </form>
+
+                    <!-- Mapeamento Granular de Sons -->
+                    <form action="<?php echo htmlspecialchars($_SERVER['REQUEST_URI'], ENT_QUOTES, 'UTF-8'); ?>" method="POST" style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1.5rem;">
+                        <?php echo renderizarCampoCSRF(); ?>
+                        <input type="hidden" name="action" value="save_sound_mappings">
+                        
+                        <span class="label-text" style="font-weight: 600; display: block; font-size: 0.9rem; color: var(--text-primary);">🎯 Configuração Granular de Sons por Evento</span>
+                        
+                        <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                            <label class="label-text" style="font-size: 0.8rem;">🚨 Chamado Urgente (Atendimento Humano)</label>
+                            <select name="audio_suporte" class="form-control" style="width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.5rem; color: var(--text-primary); outline: none;">
+                                <option value="default" <?= ($somSuporteNome === 'notificacao.mp3') ? 'selected' : '' ?>>Padrão do Sistema (notificacao.mp3)</option>
+                                <?php foreach ($audiosDisponiveis as $audio): ?>
+                                    <option value="<?= htmlspecialchars($audio) ?>" <?= ($somSuporteNome === $audio) ? 'selected' : '' ?>><?= htmlspecialchars(substr($audio, 11)) ?: htmlspecialchars($audio) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                            <label class="label-text" style="font-size: 0.8rem;">💵 Novo Lead Qualificado</label>
+                            <select name="audio_lead" class="form-control" style="width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.5rem; color: var(--text-primary); outline: none;">
+                                <option value="default" <?= ($somLeadNome === 'notificacao.mp3') ? 'selected' : '' ?>>Padrão do Sistema (notificacao.mp3)</option>
+                                <?php foreach ($audiosDisponiveis as $audio): ?>
+                                    <option value="<?= htmlspecialchars($audio) ?>" <?= ($somLeadNome === $audio) ? 'selected' : '' ?>><?= htmlspecialchars(substr($audio, 11)) ?: htmlspecialchars($audio) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                            <label class="label-text" style="font-size: 0.8rem;">🔔 Som Padrão (Outros Eventos)</label>
+                            <select name="audio_default" class="form-control" style="width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.5rem; color: var(--text-primary); outline: none;">
+                                <option value="default" <?= ($somAtivoNome === 'notificacao.mp3') ? 'selected' : '' ?>>Padrão do Sistema (notificacao.mp3)</option>
+                                <?php foreach ($audiosDisponiveis as $audio): ?>
+                                    <option value="<?= htmlspecialchars($audio) ?>" <?= ($somAtivoNome === $audio) ? 'selected' : '' ?>><?= htmlspecialchars(substr($audio, 11)) ?: htmlspecialchars($audio) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn-premium" style="width: 100%; margin: 0; padding: 0.6rem; font-weight: 600; font-size: 0.85rem;">
+                            Salvar Mapeamento de Sons
+                        </button>
                     </form>
 
                     <div id="audioLibraryContainer" style="display: flex; flex-direction: column; gap: 0.8rem; max-height: 350px; overflow-y: auto;">
@@ -745,6 +901,16 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
                 // Reseta formulários de upload e cadastro
                 if (actionVal === 'upload_audio' || actionVal === 'add_user') {
                     form.reset();
+                }
+
+                // Limpa os campos de senha após salvar o perfil
+                if (actionVal === 'update_profile') {
+                    const senhaAtual = form.querySelector('#senha_atual');
+                    const novaSenha = form.querySelector('#nova_senha');
+                    const confirmarSenha = form.querySelector('#confirmar_senha');
+                    if (senhaAtual) senhaAtual.value = '';
+                    if (novaSenha) novaSenha.value = '';
+                    if (confirmarSenha) confirmarSenha.value = '';
                 }
                 
                 // Atualizações em tempo real da marca (Sem Reload!)

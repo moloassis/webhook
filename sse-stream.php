@@ -72,14 +72,11 @@ if (session_status() === PHP_SESSION_ACTIVE) {
 
 // Inicializa a lista de IDs pendentes/aguardando enviados localmente para controlar encerramentos em tempo real
 $sentPendingIds = [];
-try {
-    $stmtInit = $db->prepare("SELECT id FROM chamados WHERE status IN ('pendente', 'aguardando') AND empresa_id = :empresa_id");
-    $stmtInit->execute([':empresa_id' => $empresaId]);
-    $sentPendingIds = $stmtInit->fetchAll(PDO::FETCH_COLUMN);
-    $sentPendingIds = array_map('intval', $sentPendingIds);
-} catch (Exception $e) {
-    registrarErro("Erro ao inicializar lista de pendentes no SSE: " . $e->getMessage());
-}
+// Setup flag file path
+$flagDir = __DIR__ . '/flags';
+$flagFile = $flagDir . "/update_{$empresaId}.txt";
+$firstRun = true;
+$lastFlagMtime = 0;
 
 // Loop infinito de transmissão em tempo real
 while (true) {
@@ -96,48 +93,91 @@ while (true) {
         break;
     }
 
-    try {
-        // 4. Buscar chamados ativos (pendentes ou aguardando) deste tenant (empresa_id)
-        $sql = "SELECT id, nome_cliente, tipo, mensagem, session_id, status, criado_em 
-                FROM chamados 
-                WHERE status IN ('pendente', 'aguardando') AND empresa_id = :empresa_id 
-                ORDER BY id ASC";
-        $stmt = $db->prepare($sql);
-        $stmt->execute([':empresa_id' => $empresaId]);
-        $currentPending = $stmt->fetchAll();
-        
-        $currentPendingIds = array_map(function($c) { return (int)$c['id']; }, $currentPending);
-
-        // Detecta chamados resolvidos (estavam na lista anterior e não estão mais no banco como pendentes)
-        $resolvedIds = array_diff($sentPendingIds, $currentPendingIds);
-        foreach ($resolvedIds as $resId) {
-            echo "data: " . json_encode(['action' => 'resolve', 'id' => $resId], JSON_UNESCAPED_UNICODE) . "\n\n";
-            // Remove da lista local
-            $sentPendingIds = array_filter($sentPendingIds, function($id) use ($resId) { return $id !== $resId; });
+    // Verifica se houve alguma alteração (novos chamados ou resoluções) via arquivo flag
+    $needQuery = false;
+    if ($firstRun) {
+        $needQuery = true;
+        $firstRun = false;
+        if (file_exists($flagFile)) {
+            $lastFlagMtime = @filemtime($flagFile);
+        } else {
+            if (!is_dir($flagDir)) {
+                @mkdir($flagDir, 0755, true);
+            }
+            @touch($flagFile);
+            $lastFlagMtime = file_exists($flagFile) ? @filemtime($flagFile) : time();
         }
+    } else {
+        if (file_exists($flagFile)) {
+            $currentMtime = @filemtime($flagFile);
+            if ($currentMtime > $lastFlagMtime) {
+                $needQuery = true;
+                $lastFlagMtime = $currentMtime;
+            }
+        } else {
+            if (!is_dir($flagDir)) {
+                @mkdir($flagDir, 0755, true);
+            }
+            @touch($flagFile);
+            $lastFlagMtime = file_exists($flagFile) ? @filemtime($flagFile) : time();
+            $needQuery = true;
+        }
+    }
 
-        // Envia novos chamados pendentes
-        foreach ($currentPending as $chamado) {
-            $cId = (int)$chamado['id'];
-            if (!in_array($cId, $sentPendingIds)) {
-                echo "data: " . json_encode($chamado, JSON_UNESCAPED_UNICODE) . "\n\n";
-                $sentPendingIds[] = $cId;
+    if ($needQuery) {
+        try {
+            // 4. Buscar chamados ativos (pendentes ou aguardando) deste tenant (empresa_id)
+            $sql = "SELECT id, nome_cliente, tipo, mensagem, session_id, status, criado_em 
+                    FROM chamados 
+                    WHERE status IN ('pendente', 'aguardando') AND empresa_id = :empresa_id 
+                    ORDER BY id ASC";
+            $stmt = $db->prepare($sql);
+            $stmt->execute([':empresa_id' => $empresaId]);
+            $currentPending = $stmt->fetchAll();
+            
+            $currentPendingIds = array_map(function($c) { return (int)$c['id']; }, $currentPending);
+
+            // Detecta chamados resolvidos (estavam na lista anterior e não estão mais no banco como pendentes)
+            $resolvedIds = array_diff($sentPendingIds, $currentPendingIds);
+            foreach ($resolvedIds as $resId) {
+                echo "data: " . json_encode(['action' => 'resolve', 'id' => $resId], JSON_UNESCAPED_UNICODE) . "\n\n";
+                // Remove da lista local
+                $sentPendingIds = array_filter($sentPendingIds, function($id) use ($resId) { return $id !== $resId; });
+            }
+
+            // Envia novos chamados pendentes
+            foreach ($currentPending as $chamado) {
+                $cId = (int)$chamado['id'];
+                if (!in_array($cId, $sentPendingIds)) {
+                    echo "data: " . json_encode($chamado, JSON_UNESCAPED_UNICODE) . "\n\n";
+                    $sentPendingIds[] = $cId;
+                }
+            }
+
+            if (ob_get_length()) {
+                ob_flush();
+            }
+            flush();
+
+        } catch (PDOException $e) {
+            registrarErro("Erro de banco de dados no loop SSE para empresa #{$empresaId}: " . $e->getMessage());
+
+            echo "data: " . json_encode(['erro' => true, 'mensagem' => 'A conexão com o banco de dados falhou temporariamente. Tentando reconectar...'], JSON_UNESCAPED_UNICODE) . "\n\n";
+            if (ob_get_length()) {
+                ob_flush();
+            }
+            flush();
+            
+            // Tenta reconectar chamando obterConexao com parâmetro true
+            sleep(5);
+            try {
+                $db = obterConexao(true);
+                // Força nova consulta no próximo loop
+                $firstRun = true;
+            } catch (Exception $ex) {
+                registrarErro("Falha ao tentar reconectar banco no SSE: " . $ex->getMessage());
             }
         }
-
-        if (ob_get_length()) {
-            ob_flush();
-        }
-        flush();
-
-    } catch (PDOException $e) {
-        registrarErro("Erro de banco de dados no loop SSE para empresa #{$empresaId}: " . $e->getMessage());
-
-        echo "data: " . json_encode(['erro' => true, 'mensagem' => 'A conexão com o banco de dados falhou temporariamente.'], JSON_UNESCAPED_UNICODE) . "\n\n";
-        if (ob_get_length()) {
-            ob_flush();
-        }
-        flush();
     }
 
     // Aguarda 2 segundos antes do próximo ciclo (evita consumo excessivo de CPU)

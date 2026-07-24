@@ -163,76 +163,21 @@ function inicializarContextoTenant(string $slug): array
  */
 function enviarPushNotificacaoCustom(string $titulo, string $mensagemPush, string $urlRedirect, int $empresaId): void
 {
-    if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
-        require_once __DIR__ . '/../vendor/autoload.php';
-    }
-    
     try {
         $db = obterConexao();
-        // Carrega todas as inscrições PWA dos usuários desta empresa
-        $stmt = $db->prepare("SELECT p.id, p.endpoint, p.keys_p256dh, p.keys_auth 
-                               FROM pwa_subscriptions p
-                               JOIN usuarios u ON p.usuario_id = u.id
-                               WHERE u.empresa_id = :empresa_id");
-        $stmt->execute([':empresa_id' => $empresaId]);
-        $inscricoes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        if (empty($inscricoes)) {
-            return;
-        }
-        
-        $auth = [
-            'VAPID' => [
-                'subject' => VAPID_SUBJECT,
-                'publicKey' => VAPID_PUBLIC_KEY,
-                'privateKey' => VAPID_PRIVATE_KEY,
-            ],
-        ];
+        $payload = json_encode([
+            'titulo' => $titulo,
+            'mensagem' => $mensagemPush,
+            'url' => $urlRedirect
+        ], JSON_UNESCAPED_UNICODE);
 
-        $webPush = new \Minishlink\WebPush\WebPush($auth);
-        
-        foreach ($inscricoes as $ins) {
-            $webPush->queueNotification(
-                \Minishlink\WebPush\Subscription::create([
-                    'endpoint' => $ins['endpoint'],
-                    'publicKey' => $ins['keys_p256dh'],
-                    'authToken' => $ins['keys_auth'],
-                ]),
-                json_encode([
-                    'titulo' => $titulo,
-                    'mensagem' => $mensagemPush,
-                    'url' => $urlRedirect
-                ], JSON_UNESCAPED_UNICODE)
-            );
-        }
-
-        $idsParaRemover = [];
-        foreach ($webPush->flush() as $report) {
-            if (!$report->isSuccess()) {
-                $response = $report->getResponse();
-                $statusCode = $response ? $response->getStatusCode() : null;
-                if ($statusCode === 410 || $statusCode === 404) {
-                    $endpointUrl = $report->getRequest()->getUri()->__toString();
-                    foreach ($inscricoes as $ins) {
-                        if ($ins['endpoint'] === $endpointUrl) {
-                            $idsParaRemover[] = $ins['id'];
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        if (!empty($idsParaRemover)) {
-            $placeholders = implode(',', array_fill(0, count($idsParaRemover), '?'));
-            $sqlDelete = "DELETE FROM pwa_subscriptions WHERE id IN ($placeholders)";
-            $stmtDel = $db->prepare($sqlDelete);
-            $stmtDel->execute($idsParaRemover);
-            registrarErro("Inscrições de Web Push inativas removidas em lote: " . implode(', ', $idsParaRemover));
-        }
-
+        $stmt = $db->prepare("INSERT INTO push_queue (empresa_id, payload, status, tentativas, criado_em) VALUES (:empresa_id, :payload, 'pendente', 0, NOW())");
+        $stmt->execute([
+            ':empresa_id' => $empresaId,
+            ':payload' => $payload
+        ]);
     } catch (Exception $e) {
-        registrarErro("Falha ao processar Web Push Customizado: " . $e->getMessage());
+        registrarErro("Falha ao enfileirar Web Push Customizado: " . $e->getMessage());
     }
 }
 
@@ -242,5 +187,75 @@ function enviarPushNotificacaoCustom(string $titulo, string $mensagemPush, strin
 function isTenantReadOnlyMode(): bool
 {
     return isset($_SESSION['usuario_role']) && $_SESSION['usuario_role'] === 'superadmin';
+}
+
+/**
+ * Envia uma atualização de card de volta para a API do CRM (Sincronização Bidirecional).
+ */
+function notificarAtualizacaoCRM(int $empresaId, string $sessionId, string $status, string $usuarioNome, string $usuarioEmail): void
+{
+    $enabled = obterConfiguracao('crm_integration_enabled', '0', $empresaId);
+    if ($enabled !== '1') {
+        return;
+    }
+    
+    $apiUrl = obterConfiguracao('crm_api_url', '', $empresaId);
+    $apiKey = obterConfiguracao('crm_api_key', '', $empresaId);
+    
+    if (empty($apiUrl)) {
+        return;
+    }
+    
+    $etapaAtendimento = obterConfiguracao('crm_etapa_atendimento', '', $empresaId);
+    $etapaFinalizado = obterConfiguracao('crm_etapa_finalizado', '', $empresaId);
+    
+    $etapaDestino = ($status === 'aguardando') ? $etapaAtendimento : $etapaFinalizado;
+    
+    // Constrói o corpo da requisição
+    $payload = [
+        'card_id' => $sessionId,
+        'status' => $status,
+        'etapa_destino' => $etapaDestino,
+        'atendido_por' => [
+            'nome' => $usuarioNome,
+            'email' => $usuarioEmail
+        ]
+    ];
+    
+    // Dispara via cURL
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $apiUrl);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload, JSON_UNESCAPED_UNICODE));
+    
+    $headers = [
+        'Content-Type: application/json',
+        'User-Agent: CentralAlertas/1.0'
+    ];
+    if (!empty($apiKey)) {
+        $headers[] = 'Authorization: Bearer ' . $apiKey;
+        $headers[] = 'X-API-Key: ' . $apiKey;
+    }
+    
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 5); // Timeout curto de 5 segundos
+    
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    
+    if (curl_errno($ch)) {
+        registrarErro("Erro cURL ao notificar CRM: " . curl_error($ch), [
+            'empresa_id' => $empresaId,
+            'session_id' => $sessionId
+        ]);
+    } elseif ($httpCode >= 400) {
+        registrarErro("Resposta HTTP de erro do CRM ({$httpCode}): " . $response, [
+            'empresa_id' => $empresaId,
+            'session_id' => $sessionId
+        ]);
+    }
+    
+    curl_close($ch);
 }
 

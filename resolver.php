@@ -67,7 +67,7 @@ try {
     $db = obterConexao();
     
     // Busca os detalhes do chamado antes de alterá-lo (suporta pendente ou aguardando)
-    $stmtSelect = $db->prepare("SELECT nome_cliente, tipo, status FROM chamados WHERE id = :id AND empresa_id = :empresa_id AND status IN ('pendente', 'aguardando')");
+    $stmtSelect = $db->prepare("SELECT nome_cliente, tipo, status, session_id FROM chamados WHERE id = :id AND empresa_id = :empresa_id AND status IN ('pendente', 'aguardando')");
     $stmtSelect->execute([':id' => $id, ':empresa_id' => $empresaId]);
     $chamado = $stmtSelect->fetch();
     
@@ -99,6 +99,20 @@ try {
         ':empresa_id' => $empresaId
     ]);
     
+    // Notifica SSE atualizando o arquivo flag
+    $flagDir = __DIR__ . '/flags';
+    if (!is_dir($flagDir)) {
+        mkdir($flagDir, 0755, true);
+    }
+    touch($flagDir . "/update_{$empresaId}.txt");
+
+    // Sincronização bidirecional com o CRM
+    if (!empty($chamado['session_id'])) {
+        $usuarioNome = $_SESSION['usuario_nome'] ?? 'Operador';
+        $usuarioEmail = $_SESSION['usuario_email'] ?? '';
+        notificarAtualizacaoCRM($empresaId, $chamado['session_id'], $status, $usuarioNome, $usuarioEmail);
+    }
+
     // Só envia o alerta push de finalização aos demais atendentes se for resolvido de fato
     if ($status === 'resolvido') {
         $usuarioNome = $_SESSION['usuario_nome'] ?? 'Operador';
