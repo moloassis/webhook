@@ -1,9 +1,8 @@
-const CACHE_NAME = 'alertas-ai-cache-v2';
+const CACHE_NAME = 'alertas-ai-cache-v3';
 const ASSETS_TO_CACHE = [
   'index.html',
   'manifest.json',
   'assets/css/index.css',
-  'assets/js/index.js',
   'assets/img/icon_192.png',
   'assets/img/icon_512.png',
   'assets/audio/notificacao.mp3'
@@ -43,8 +42,8 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  // BYPASS: Ignora navegações de página (GET de documentos HTML), scripts PHP e fluxos dinâmicos
-  if (event.request.mode === 'navigate' || url.pathname.endsWith('.php') || url.search.includes('last_id') || event.request.method !== 'GET') {
+  // BYPASS: Ignora navegações de página (GET de documentos HTML), scripts PHP, JS e fluxos dinâmicos
+  if (event.request.mode === 'navigate' || url.pathname.endsWith('.php') || url.pathname.endsWith('.js') || url.search.includes('last_id') || url.search.includes('v=') || event.request.method !== 'GET') {
     return; // Passa direto para a rede
   }
 

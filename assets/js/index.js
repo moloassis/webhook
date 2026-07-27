@@ -69,7 +69,10 @@
         // Helper para formatar data e hora (ex: 27/07/2026 14:53:35)
         function formatarDataHora(dateStr) {
             if (!dateStr) return '';
-            const d = new Date(dateStr.replace(/-/g, "/"));
+            let d = new Date(dateStr);
+            if (isNaN(d.getTime())) {
+                d = new Date(String(dateStr).replace(/-/g, "/"));
+            }
             if (isNaN(d.getTime())) return dateStr;
             const dia = String(d.getDate()).padStart(2, '0');
             const mes = String(d.getMonth() + 1).padStart(2, '0');
