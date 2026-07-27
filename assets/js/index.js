@@ -66,6 +66,20 @@
             return `https://madeinai.wts.chat/chat2/sessions/${sessionId}`;
         }
 
+        // Helper para formatar data e hora (ex: 27/07/2026 14:53:35)
+        function formatarDataHora(dateStr) {
+            if (!dateStr) return '';
+            const d = new Date(dateStr.replace(/-/g, "/"));
+            if (isNaN(d.getTime())) return dateStr;
+            const dia = String(d.getDate()).padStart(2, '0');
+            const mes = String(d.getMonth() + 1).padStart(2, '0');
+            const ano = d.getFullYear();
+            const hora = String(d.getHours()).padStart(2, '0');
+            const min = String(d.getMinutes()).padStart(2, '0');
+            const seg = String(d.getSeconds()).padStart(2, '0');
+            return `${dia}/${mes}/${ano} ${hora}:${min}:${seg}`;
+        }
+
         // Helper para mapear o eventType bruto em estilo visual (classe, ícone, label)
         function obterEstiloEvento(item) {
             const tipo = item.tipo;
@@ -575,16 +589,12 @@
                      document.getElementById('urgentModalMsg').textContent = chamadoUrgente.mensagem || 'Requer suporte humano.';
                  }
                  
-                 const horaFormatada = new Date(chamadoUrgente.criado_em.replace(/-/g, "/")).toLocaleTimeString('pt-BR', {
-                     hour: '2-digit',
-                     minute: '2-digit',
-                     second: '2-digit'
-                 });
+                 const horaFormatada = formatarDataHora(chamadoUrgente.criado_em);
                  
                  if (isAtrasado) {
-                     document.getElementById('urgentModalTime').textContent = `⚠️ Aguardando resposta há ${minutosEspera} minutos (Recebido às ${horaFormatada})`;
+                     document.getElementById('urgentModalTime').textContent = `⚠️ Aguardando resposta há ${minutosEspera} minutos (Recebido em ${horaFormatada})`;
                  } else {
-                     document.getElementById('urgentModalTime').textContent = '⏳ Recebido às ' + horaFormatada;
+                     document.getElementById('urgentModalTime').textContent = '⏳ Recebido em ' + horaFormatada;
                  }
                  
                  const btnUrgentResolve = document.getElementById('btnUrgentResolve');
@@ -666,12 +676,8 @@
                  const icon = estilo.icon;
                  const labelTipo = estilo.label;
  
-                 // Formatar hora
-                 const horaFormatada = new Date(item.criado_em.replace(/-/g, "/")).toLocaleTimeString('pt-BR', {
-                     hour: '2-digit',
-                     minute: '2-digit',
-                     second: '2-digit'
-                 });
+                 // Formatar data e hora
+                 const horaFormatada = formatarDataHora(item.criado_em);
  
                  // Calcula tempo de espera em minutos para atendimento humano (ajustado pelo clockSkew do servidor)
                  const criadoEmDate = new Date(item.criado_em.replace(/-/g, "/"));

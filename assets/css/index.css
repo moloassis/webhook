@@ -574,7 +574,7 @@
 
         .card-time {
             font-size: 0.75rem;
-            color: rgba(255, 255, 255, 0.3);
+            color: var(--text-secondary);
             display: flex;
             align-items: center;
             gap: 4px;

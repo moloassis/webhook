@@ -257,6 +257,14 @@ $corSecundariaGlow = hex2rgba($corSecundaria, 0.4);
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03) !important;
         }
 
+        body.light-mode .card-time {
+            color: #64748b !important;
+        }
+
+        body.light-mode .urgent-modal-time {
+            color: #475569 !important;
+        }
+
         body.light-mode .alert-card:hover {
             background: #ffffff !important;
             border-color: rgba(0, 0, 0, 0.15) !important;
