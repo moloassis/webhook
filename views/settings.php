@@ -623,7 +623,7 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
                                 Ao clicar em <strong style="color: var(--text-primary);">"+ Adicionar condição"</strong>, a nova linha já é inserida automaticamente <strong>antes</strong> da curinga do bloco — você só precisa preencher a palavra-chave e escolher categoria/modo de exibição.
                             </div>
                             <div>
-                                <strong style="color: var(--text-primary);">Chamado ativo já existente:</strong> se o cliente já tem um alerta aberto (pendente ou aguardando) e chega um novo evento para ele, por padrão o sistema apenas <strong>unifica</strong> (ignora o novo evento) para não duplicar. Isso pode fazer com que uma mudança importante passe despercebida. Use a opção <strong style="color: var(--text-primary);">"Sempre notificar"</strong> logo abaixo se preferir que todo evento gere um alerta novo e atualizado, mesmo já existindo um em aberto.
+                                <strong style="color: var(--text-primary);">Chamado ativo já existente:</strong> se o cliente já tem um alerta aberto (pendente ou aguardando) e chega um novo evento para ele, por padrão o sistema apenas <strong>unifica</strong> (ignora o novo evento) para não duplicar. Isso pode fazer com que uma mudança importante passe despercebida. Cada bloco de evento abaixo tem sua própria opção <strong style="color: var(--text-primary);">"Sempre notificar"</strong>, caso prefira que aquele tipo específico sempre gere um alerta novo e atualizado, mesmo já existindo um em aberto. Mudanças de card no CRM (Kanban) já se comportam assim por padrão, então não têm essa opção.
                             </div>
                             <div>
                                 Use <strong style="color: var(--text-primary);">"Restaurar Padrão do Sistema"</strong> para apagar toda a customização e voltar ao comportamento original.
@@ -663,23 +663,7 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
                         <?php echo renderizarCampoCSRF(); ?>
                         <input type="hidden" name="action" value="save_webhook_rules">
 
-                        <div style="border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem; display: flex; flex-direction: column; gap: 0.6rem;">
-                            <span class="label-text" style="font-weight: 600; font-size: 0.85rem; color: var(--text-primary);">
-                                Quando um evento chega e já existe um chamado ativo para o mesmo cliente
-                            </span>
-                            <span class="label-text" style="font-size: 0.74rem; color: var(--text-secondary);">
-                                Não se aplica a mudanças de card no CRM (Kanban) — essas sempre geram um alerta novo e atualizado, pois representam uma mudança real de etapa.
-                            </span>
-                            <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer;">
-                                <input type="radio" name="dedup_modo" value="unificar" style="margin-top: 3px;" <?= ($webhookDedupModo !== 'sempre_notificar') ? 'checked' : '' ?>>
-                                <span class="label-text" style="font-size: 0.8rem;"><strong>Unificar (padrão)</strong> — ignora o novo evento, mantendo apenas o alerta já ativo.</span>
-                            </label>
-                            <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer;">
-                                <input type="radio" name="dedup_modo" value="sempre_notificar" style="margin-top: 3px;" <?= ($webhookDedupModo === 'sempre_notificar') ? 'checked' : '' ?>>
-                                <span class="label-text" style="font-size: 0.8rem;"><strong>Sempre notificar</strong> — resolve o alerta anterior e cria um novo, atualizado, para qualquer tipo de evento.</span>
-                            </label>
-                        </div>
-
+                        <?php $tiposMudancaDeCard = ['PANEL_CARD_STEP_CHANGE', 'PANEL_CARD_UPDATE', 'PANEL_CARD_NEW']; ?>
                         <?php foreach ($eventosLabelsWebhook as $tipoEvento => $labelEvento): ?>
                             <div class="webhook-regra-grupo" data-tipo-evento="<?= htmlspecialchars($tipoEvento) ?>" style="border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem; display: flex; flex-direction: column; gap: 0.7rem;">
                                 <span class="label-text" style="font-weight: 600; font-size: 0.85rem; color: var(--text-primary);">
@@ -707,6 +691,29 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
                                 </div>
 
                                 <button type="button" class="btn-inspect btn-adicionar-linha-regra" style="align-self: flex-start; font-size: 0.72rem; padding: 0.3rem 0.6rem; border-radius: 6px;">+ Adicionar condição</button>
+
+                                <?php if (!in_array($tipoEvento, $tiposMudancaDeCard, true)): ?>
+                                    <?php $dedupAtual = $webhookDedupModos[$tipoEvento] ?? 'unificar'; ?>
+                                    <div style="border-top: 1px solid var(--border-color); margin-top: 0.3rem; padding-top: 0.7rem; display: flex; flex-direction: column; gap: 0.4rem;">
+                                        <span class="label-text" style="font-size: 0.76rem; color: var(--text-secondary);">
+                                            Se já existir um chamado ativo para o mesmo cliente quando este evento chegar:
+                                        </span>
+                                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                            <input type="radio" name="dedup_modo[<?= htmlspecialchars($tipoEvento) ?>]" value="unificar" <?= ($dedupAtual !== 'sempre_notificar') ? 'checked' : '' ?>>
+                                            <span class="label-text" style="font-size: 0.76rem;">Unificar (padrão) — ignora o novo evento</span>
+                                        </label>
+                                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                            <input type="radio" name="dedup_modo[<?= htmlspecialchars($tipoEvento) ?>]" value="sempre_notificar" <?= ($dedupAtual === 'sempre_notificar') ? 'checked' : '' ?>>
+                                            <span class="label-text" style="font-size: 0.76rem;">Sempre notificar — cria um alerta novo mesmo assim</span>
+                                        </label>
+                                    </div>
+                                <?php else: ?>
+                                    <div style="border-top: 1px solid var(--border-color); margin-top: 0.3rem; padding-top: 0.7rem;">
+                                        <span class="label-text" style="font-size: 0.74rem; color: var(--text-secondary); font-style: italic;">
+                                            Mudanças de card sempre geram um alerta novo e atualizado — não há o que configurar aqui.
+                                        </span>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         <?php endforeach; ?>
 

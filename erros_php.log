@@ -5,3 +5,17 @@ Stack trace:
 [09-Jul-2026 11:54:20 America/Sao_Paulo] PHP Parse error:  syntax error, unexpected token "catch" in C:\Users\Moloise\OneDrive\www\webhook\controllers\superadmin_controller.php on line 118
 [09-Jul-2026 11:54:22 America/Sao_Paulo] PHP Parse error:  syntax error, unexpected token "catch" in C:\Users\Moloise\OneDrive\www\webhook\controllers\superadmin_controller.php on line 118
 [09-Jul-2026 11:54:27 America/Sao_Paulo] PHP Parse error:  syntax error, unexpected token "catch" in C:\Users\Moloise\OneDrive\www\webhook\controllers\superadmin_controller.php on line 118
+[28-Jul-2026 13:11:58 America/Sao_Paulo] PHP Warning:  session_id(): Session ID cannot be changed when a session is active in Command line code on line 7
+[28-Jul-2026 13:11:58 America/Sao_Paulo] PHP Notice:  session_start(): Ignoring session_start() because a session is already active (started from C:\Users\Moloise\OneDrive\www\webhook\helpers\security.php on line 8) in Command line code on line 8
+[28-Jul-2026 13:12:29 America/Sao_Paulo] PHP Warning:  session_save_path(): Session save path cannot be changed when a session is active in Command line code on line 6
+[28-Jul-2026 13:12:29 America/Sao_Paulo] PHP Warning:  session_id(): Session ID cannot be changed when a session is active in Command line code on line 8
+[28-Jul-2026 13:12:29 America/Sao_Paulo] PHP Notice:  session_start(): Ignoring session_start() because a session is already active (started from C:\Users\Moloise\OneDrive\www\webhook\helpers\security.php on line 8) in Command line code on line 9
+[28-Jul-2026 13:13:01 America/Sao_Paulo] PHP Warning:  session_save_path(): Session save path cannot be changed when a session is active in Command line code on line 4
+[28-Jul-2026 13:13:01 America/Sao_Paulo] PHP Warning:  session_id(): Session ID cannot be changed when a session is active in Command line code on line 6
+[28-Jul-2026 13:13:01 America/Sao_Paulo] PHP Notice:  session_start(): Ignoring session_start() because a session is already active (started from C:\Users\Moloise\OneDrive\www\webhook\helpers\security.php on line 8) in Command line code on line 7
+[28-Jul-2026 13:13:33 America/Sao_Paulo] PHP Warning:  session_save_path(): Session save path cannot be changed when a session is active in Command line code on line 3
+[28-Jul-2026 13:13:33 America/Sao_Paulo] PHP Warning:  session_id(): Session ID cannot be changed when a session is active in Command line code on line 4
+[28-Jul-2026 13:13:33 America/Sao_Paulo] PHP Notice:  session_start(): Ignoring session_start() because a session is already active (started from C:\Users\Moloise\OneDrive\www\webhook\helpers\security.php on line 8) in Command line code on line 5
+[28-Jul-2026 13:13:54 America/Sao_Paulo] PHP Warning:  session_save_path(): Session save path cannot be changed when a session is active in Command line code on line 3
+[28-Jul-2026 13:13:54 America/Sao_Paulo] PHP Notice:  session_start(): Ignoring session_start() because a session is already active (started from C:\Users\Moloise\OneDrive\www\webhook\helpers\security.php on line 8) in Command line code on line 4
+[28-Jul-2026 13:13:54 America/Sao_Paulo] PHP Warning:  file_put_contents(C:/Users/Moloise/AppData/Local/Temp/claude/c--Users-Moloise-OneDrive-www-webhook/d78300d9-d3d2-471c-9b0c-55abdc81c310/scratchpad/sess_info.txt): Failed to open stream: No such file or directory in Command line code on line 24

@@ -10,6 +10,7 @@ require_once __DIR__ . '/../db.php';
 
 const CATEGORIAS_VALIDAS_WEBHOOK = ['atendimento_humano', 'novo_lead', 'novo_atendimento', 'alerta_sistema', 'ignorar'];
 const MODOS_EXIBICAO_VALIDOS_WEBHOOK = ['normal', 'urgente_fullscreen', 'silencioso'];
+const MODOS_DEDUP_VALIDOS_WEBHOOK = ['unificar', 'sempre_notificar'];
 
 /**
  * Conjunto de regras padrão do sistema — tradução literal do comportamento hardcoded
@@ -107,6 +108,49 @@ function obterRegrasWebhook(int $empresaId): array
     }
 
     return $padrao;
+}
+
+/**
+ * Carrega o modo de deduplicação customizado por tipo de evento (chave "dedup_modos" dentro do
+ * mesmo blob JSON de `webhook_event_rules`). Tipos não customizados não aparecem no retorno —
+ * quem chama deve tratar a ausência como o padrão 'unificar'.
+ *
+ * @return array<string, string>
+ */
+function obterModosDedupWebhook(int $empresaId): array
+{
+    $configBruta = obterConfiguracao('webhook_event_rules', null, $empresaId);
+    if (empty($configBruta)) {
+        return [];
+    }
+
+    try {
+        $decodificado = json_decode($configBruta, true, 512, JSON_THROW_ON_ERROR);
+    } catch (\JsonException $e) {
+        return [];
+    }
+
+    if (!is_array($decodificado) || !isset($decodificado['dedup_modos']) || !is_array($decodificado['dedup_modos'])) {
+        return [];
+    }
+
+    $resultado = [];
+    foreach ($decodificado['dedup_modos'] as $tipoEvento => $modo) {
+        if (is_string($tipoEvento) && in_array($modo, MODOS_DEDUP_VALIDOS_WEBHOOK, true)) {
+            $resultado[$tipoEvento] = $modo;
+        }
+    }
+
+    return $resultado;
+}
+
+/**
+ * Retorna o modo de deduplicação efetivo para um tipo de evento específico ('unificar' por padrão).
+ */
+function obterModoDedupEvento(string $eventType, int $empresaId): string
+{
+    $modos = obterModosDedupWebhook($empresaId);
+    return $modos[$eventType] ?? 'unificar';
 }
 
 /**

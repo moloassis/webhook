@@ -346,64 +346,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // AÇÃO: Salvar Regras de Webhook (categoria + modo de exibição por tipo de evento)
+        // AÇÃO: Salvar Regras de Webhook (categoria + modo de exibição + modo de deduplicação, por tipo de evento)
         elseif ($action === 'save_webhook_rules') {
-            $dedupModo = isset($_POST['dedup_modo']) ? trim($_POST['dedup_modo']) : 'unificar';
-            if (!in_array($dedupModo, ['unificar', 'sempre_notificar'], true)) {
-                $dedupModo = 'unificar';
-            }
-            $okDedup = salvarConfiguracao('webhook_dedup_modo', $dedupModo, $empresaId);
-
             $regrasPost = isset($_POST['regras']) && is_array($_POST['regras']) ? $_POST['regras'] : [];
+            $dedupPost = isset($_POST['dedup_modo']) && is_array($_POST['dedup_modo']) ? $_POST['dedup_modo'] : [];
             $tiposConhecidos = array_keys(regrasPadraoWebhook());
             $eventosValidados = [];
+            $dedupValidados = [];
 
             foreach ($tiposConhecidos as $tipoEvento) {
-                if (!isset($regrasPost[$tipoEvento]) || !is_array($regrasPost[$tipoEvento])) {
-                    continue;
+                if (isset($regrasPost[$tipoEvento]) && is_array($regrasPost[$tipoEvento])) {
+                    $linhasValidas = [];
+                    foreach ($regrasPost[$tipoEvento] as $linha) {
+                        if (!is_array($linha)) {
+                            continue;
+                        }
+
+                        $categoria = trim((string)($linha['categoria'] ?? 'ignorar'));
+                        $modoExibicao = trim((string)($linha['modo_exibicao'] ?? 'normal'));
+                        $condicao = trim((string)($linha['condicao'] ?? ''));
+
+                        if (!in_array($categoria, CATEGORIAS_VALIDAS_WEBHOOK, true)) {
+                            continue;
+                        }
+                        if (!in_array($modoExibicao, MODOS_EXIBICAO_VALIDOS_WEBHOOK, true)) {
+                            continue;
+                        }
+
+                        $condicao = mb_substr($condicao, 0, 300);
+
+                        $linhasValidas[] = [
+                            'condicao_palavras' => $condicao,
+                            'categoria' => $categoria,
+                            'modo_exibicao' => $modoExibicao
+                        ];
+
+                        if (count($linhasValidas) >= 20) {
+                            break;
+                        }
+                    }
+
+                    if (!empty($linhasValidas)) {
+                        $eventosValidados[$tipoEvento] = $linhasValidas;
+                    }
                 }
 
-                $linhasValidas = [];
-                foreach ($regrasPost[$tipoEvento] as $linha) {
-                    if (!is_array($linha)) {
-                        continue;
+                if (isset($dedupPost[$tipoEvento])) {
+                    $modoDedup = trim((string)$dedupPost[$tipoEvento]);
+                    if (in_array($modoDedup, MODOS_DEDUP_VALIDOS_WEBHOOK, true)) {
+                        $dedupValidados[$tipoEvento] = $modoDedup;
                     }
-
-                    $categoria = trim((string)($linha['categoria'] ?? 'ignorar'));
-                    $modoExibicao = trim((string)($linha['modo_exibicao'] ?? 'normal'));
-                    $condicao = trim((string)($linha['condicao'] ?? ''));
-
-                    if (!in_array($categoria, CATEGORIAS_VALIDAS_WEBHOOK, true)) {
-                        continue;
-                    }
-                    if (!in_array($modoExibicao, MODOS_EXIBICAO_VALIDOS_WEBHOOK, true)) {
-                        continue;
-                    }
-
-                    $condicao = mb_substr($condicao, 0, 300);
-
-                    $linhasValidas[] = [
-                        'condicao_palavras' => $condicao,
-                        'categoria' => $categoria,
-                        'modo_exibicao' => $modoExibicao
-                    ];
-
-                    if (count($linhasValidas) >= 20) {
-                        break;
-                    }
-                }
-
-                if (!empty($linhasValidas)) {
-                    $eventosValidados[$tipoEvento] = $linhasValidas;
                 }
             }
 
             if (empty($eventosValidados)) {
                 $statusQuery = 'error=' . urlencode('Nenhuma regra válida foi enviada.');
             } else {
-                $estrutura = ['schema_version' => 1, 'eventos' => $eventosValidados];
+                $estrutura = ['schema_version' => 1, 'eventos' => $eventosValidados, 'dedup_modos' => $dedupValidados];
                 $okRegras = salvarConfiguracao('webhook_event_rules', json_encode($estrutura, JSON_UNESCAPED_UNICODE), $empresaId);
-                $statusQuery = ($okRegras && $okDedup)
+                $statusQuery = $okRegras
                     ? 'success=' . urlencode('Regras de webhook salvas com sucesso!')
                     : 'error=' . urlencode('Falha ao salvar as regras de webhook.');
             }
@@ -411,9 +412,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // AÇÃO: Restaurar Regras de Webhook para o padrão do sistema
         elseif ($action === 'reset_webhook_rules') {
-            $ok1 = removerConfiguracao('webhook_event_rules', $empresaId);
-            $ok2 = removerConfiguracao('webhook_dedup_modo', $empresaId);
-            $statusQuery = ($ok1 && $ok2)
+            $ok = removerConfiguracao('webhook_event_rules', $empresaId);
+            $statusQuery = $ok
                 ? 'success=' . urlencode('Regras de webhook restauradas para o padrão do sistema!')
                 : 'error=' . urlencode('Falha ao restaurar as regras de webhook.');
         }
@@ -692,7 +692,7 @@ $somLeadNome = basename($somLead);
 // Regras de webhook (categoria + modo de exibição por tipo de evento) — já cai no padrão se o tenant não customizou
 $webhookRegras = obterRegrasWebhook($empresaId);
 $webhookRegrasCustomizadas = !empty(obterConfiguracao('webhook_event_rules', null, $empresaId));
-$webhookDedupModo = obterConfiguracao('webhook_dedup_modo', 'unificar', $empresaId);
+$webhookDedupModos = obterModosDedupWebhook($empresaId);
 
 // CRM settings
 $crmIntegrationEnabled = obterConfiguracao('crm_integration_enabled', '0', $empresaId);

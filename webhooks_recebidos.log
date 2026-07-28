@@ -430,3 +430,87 @@
 }
 ============================================================
 
+============================================================
+{
+    "data": "2026-07-28 13:15:21",
+    "ip": "127.0.0.1",
+    "metodo": "POST",
+    "headers": {
+        "Host": "127.0.0.1:8099",
+        "User-Agent": "curl/8.16.0",
+        "Accept": "*/*",
+        "Content-Type": "application/json",
+        "Content-Length": "127"
+    },
+    "get": {
+        "token": "83314c388937710729fbd503ab60085e"
+    },
+    "post_bruto": "{\"eventType\":\"SESSION_NEW\",\"content\":{\"contactDetails\":{\"name\":\"Teste Dedup PorTipo\",\"phonenumberFormatted\":\"+5511922223333\"}}}",
+    "post_decodificado": {
+        "eventType": "SESSION_NEW",
+        "content": {
+            "contactDetails": {
+                "name": "Teste Dedup PorTipo",
+                "phonenumberFormatted": "+5511922223333"
+            }
+        }
+    }
+}
+============================================================
+
+============================================================
+{
+    "data": "2026-07-28 13:15:22",
+    "ip": "127.0.0.1",
+    "metodo": "POST",
+    "headers": {
+        "Host": "127.0.0.1:8099",
+        "User-Agent": "curl/8.16.0",
+        "Accept": "*/*",
+        "Content-Type": "application/json",
+        "Content-Length": "128"
+    },
+    "get": {
+        "token": "83314c388937710729fbd503ab60085e"
+    },
+    "post_bruto": "{\"eventType\":\"SESSION_NEW\",\"content\":{\"contactDetails\":{\"name\":\"Teste Dedup PorTipo\",\"phonenumberFormatted\":\"+5511922223333b\"}}}",
+    "post_decodificado": {
+        "eventType": "SESSION_NEW",
+        "content": {
+            "contactDetails": {
+                "name": "Teste Dedup PorTipo",
+                "phonenumberFormatted": "+5511922223333b"
+            }
+        }
+    }
+}
+============================================================
+
+============================================================
+{
+    "data": "2026-07-28 13:15:42",
+    "ip": "127.0.0.1",
+    "metodo": "POST",
+    "headers": {
+        "Host": "127.0.0.1:8099",
+        "User-Agent": "curl/8.16.0",
+        "Accept": "*/*",
+        "Content-Type": "application/json",
+        "Content-Length": "105"
+    },
+    "get": {
+        "token": "83314c388937710729fbd503ab60085e"
+    },
+    "post_bruto": "{\"eventType\":\"CONTACT_TAG_UPDATE\",\"content\":{\"name\":\"Teste Dedup PorTipo\",\"tags\":[\"Atendimento Humano\"]}}",
+    "post_decodificado": {
+        "eventType": "CONTACT_TAG_UPDATE",
+        "content": {
+            "name": "Teste Dedup PorTipo",
+            "tags": [
+                "Atendimento Humano"
+            ]
+        }
+    }
+}
+============================================================
+

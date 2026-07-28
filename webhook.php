@@ -339,9 +339,10 @@ if ($criarChamadoAtivo) {
                 // atualizado, já que representam uma mudança real de etapa/estado do card, não uma duplicata.
                 $ehMudancaDeCard = in_array($eventType, ['PANEL_CARD_STEP_CHANGE', 'PANEL_CARD_UPDATE', 'PANEL_CARD_NEW'], true);
 
-                // Configuração do tenant: "unificar" (padrão) ignora o novo evento se já existir chamado ativo
-                // para o mesmo contato; "sempre_notificar" resolve o antigo e sempre cria um alerta novo e atualizado.
-                $modoDedup = obterConfiguracao('webhook_dedup_modo', 'unificar', $empresaId);
+                // Configuração do tenant por tipo de evento: "unificar" (padrão) ignora o novo evento se já
+                // existir chamado ativo para o mesmo contato; "sempre_notificar" resolve o antigo e sempre
+                // cria um alerta novo e atualizado.
+                $modoDedup = obterModoDedupEvento($eventType ?? 'OUTRO', $empresaId);
 
                 if ($ehMudancaDeCard || $modoDedup === 'sempre_notificar') {
                     $sqlResolve = "UPDATE chamados SET status = 'resolvido' WHERE status IN ('pendente', 'aguardando') AND empresa_id = :empresa_id AND (";
