@@ -111,3 +111,87 @@
 }
 ============================================================
 
+============================================================
+{
+    "data": "2026-07-27 23:43:59",
+    "ip": "127.0.0.1",
+    "metodo": "POST",
+    "headers": {
+        "Host": "127.0.0.1:8099",
+        "User-Agent": "curl/8.16.0",
+        "Accept": "*/*",
+        "Content-Type": "application/json",
+        "Content-Length": "131"
+    },
+    "get": {
+        "token": "c651c2467d8b6fb6ad07a5436af77612"
+    },
+    "post_bruto": "{\"eventType\":\"SESSION_NEW\",\"content\":{\"contactDetails\":{\"name\":\"Teste Regra Customizada\",\"phonenumberFormatted\":\"+5511988887777\"}}}",
+    "post_decodificado": {
+        "eventType": "SESSION_NEW",
+        "content": {
+            "contactDetails": {
+                "name": "Teste Regra Customizada",
+                "phonenumberFormatted": "+5511988887777"
+            }
+        }
+    }
+}
+============================================================
+
+============================================================
+{
+    "data": "2026-07-27 23:44:48",
+    "ip": "127.0.0.1",
+    "metodo": "POST",
+    "headers": {
+        "Host": "127.0.0.1:8099",
+        "User-Agent": "curl/8.16.0",
+        "Accept": "*/*",
+        "Content-Type": "application/json",
+        "Content-Length": "90"
+    },
+    "get": {
+        "token": "c651c2467d8b6fb6ad07a5436af77612"
+    },
+    "post_bruto": "{\"eventType\":\"CONTACT_TAG_UPDATE\",\"content\":{\"name\":\"Teste Bug Ordem\",\"tags\":[\"urgente\"]}}",
+    "post_decodificado": {
+        "eventType": "CONTACT_TAG_UPDATE",
+        "content": {
+            "name": "Teste Bug Ordem",
+            "tags": [
+                "urgente"
+            ]
+        }
+    }
+}
+============================================================
+
+============================================================
+{
+    "data": "2026-07-27 23:46:06",
+    "ip": "127.0.0.1",
+    "metodo": "POST",
+    "headers": {
+        "Host": "127.0.0.1:8099",
+        "User-Agent": "curl/8.16.0",
+        "Accept": "*/*",
+        "Content-Type": "application/json",
+        "Content-Length": "96"
+    },
+    "get": {
+        "token": "c651c2467d8b6fb6ad07a5436af77612"
+    },
+    "post_bruto": "{\"eventType\":\"CONTACT_TAG_UPDATE\",\"content\":{\"name\":\"Teste Ordem Corrigida\",\"tags\":[\"urgente\"]}}",
+    "post_decodificado": {
+        "eventType": "CONTACT_TAG_UPDATE",
+        "content": {
+            "name": "Teste Ordem Corrigida",
+            "tags": [
+                "urgente"
+            ]
+        }
+    }
+}
+============================================================
+

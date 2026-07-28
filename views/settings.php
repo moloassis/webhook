@@ -607,9 +607,6 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
                         </summary>
                         <div style="margin-top: 0.8rem; display: flex; flex-direction: column; gap: 0.6rem; font-size: 0.76rem; color: var(--text-secondary); line-height: 1.5;">
                             <div>
-                                <strong style="color: var(--text-primary);">Ordem importa.</strong> Para cada evento, as regras do bloco são avaliadas de cima para baixo — a <strong>primeira</strong> cuja condição seja vazia (curinga, "sempre bate") ou cuja palavra-chave seja encontrada no texto do evento (tag, etapa do CRM ou última mensagem) é a que vale. Por isso a última linha de cada bloco costuma ser a curinga, funcionando como o "senão".
-                            </div>
-                            <div>
                                 <strong style="color: var(--text-primary);">Categoria</strong> define que tipo de alerta é criado (Atendimento Humano, Novo Lead, Novo Atendimento, Alerta Sistema) — ou escolha <strong>Ignorar</strong> para não criar alerta nenhum (o evento continua registrado no log).
                             </div>
                             <div>
@@ -618,8 +615,15 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
                             <div>
                                 <strong style="color: var(--color-atendimento);">Silencioso é absoluto:</strong> mesmo que a categoria seja Atendimento Humano e o cliente fique esperando além do prazo configurado, um alerta silencioso <strong>nunca</strong> dispara som, notificação ou tela cheia. O card e o aviso de "aguardando" continuam aparecendo normalmente no grid — só não fazem barulho.
                             </div>
+                            <div style="background: rgba(255,255,255,0.03); border-left: 3px solid var(--color-lead); border-radius: 6px; padding: 0.6rem 0.8rem;">
+                                <strong style="color: var(--text-primary);">⚠️ A ordem das linhas decide tudo.</strong> Dentro de cada bloco, as regras são lidas de cima para baixo e a <strong>primeira</strong> que bater "vence" — as de baixo nem chegam a ser olhadas. Uma condição com o campo de palavras-chave <strong>vazio</strong> é a "curinga": ela bate sempre, então normalmente fica na <strong>última</strong> linha, funcionando como o "senão". Por isso uma regra específica (com palavra-chave preenchida) só faz efeito se estiver <strong>acima</strong> da curinga — se estiver abaixo, a curinga já terá capturado o evento antes e a sua regra nunca será usada.
+                                <br><br>
+                                <em>Exemplo:</em> em "Etiqueta Atualizada no CRM", a linha 1 (palavra-chave "atendimento humano" → Atendimento Humano) precisa vir antes da linha 2 (vazia → Ignorar). Se fosse ao contrário, todo evento cairia direto na curinga e viraria "Ignorar", mesmo com a tag certa.
+                                <br><br>
+                                Ao clicar em <strong style="color: var(--text-primary);">"+ Adicionar condição"</strong>, a nova linha já é inserida automaticamente <strong>antes</strong> da curinga do bloco — você só precisa preencher a palavra-chave e escolher categoria/modo de exibição.
+                            </div>
                             <div>
-                                Use <strong style="color: var(--text-primary);">"+ Adicionar condição"</strong> para criar uma nova regra dentro de um bloco (ex.: uma palavra-chave extra que sua equipe usa) e posicione-a <strong>antes</strong> da curinga. Use <strong style="color: var(--text-primary);">"Restaurar Padrão do Sistema"</strong> para apagar toda a customização e voltar ao comportamento original.
+                                Use <strong style="color: var(--text-primary);">"Restaurar Padrão do Sistema"</strong> para apagar toda a customização e voltar ao comportamento original.
                             </div>
                         </div>
                     </details>
@@ -1008,7 +1012,20 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
                 </select>
                 <button type="button" class="btn-inspect btn-remover-linha-regra" style="font-size: 0.7rem; padding: 0.35rem 0.5rem; border-radius: 6px; background: rgba(255, 71, 87, 0.15); border-color: rgba(255, 71, 87, 0.3); color: var(--color-atendimento);">✕</button>
             `;
-            linhasContainer.appendChild(novaLinha);
+
+            // As regras são avaliadas de cima para baixo, e a última linha costuma ser a curinga
+            // (condição vazia, que sempre bate). Se a nova linha fosse acrescentada depois dela,
+            // nunca seria avaliada — por isso ela entra ANTES da curinga, não no final da lista.
+            const linhasExistentes = linhasContainer.querySelectorAll('.webhook-regra-linha');
+            const ultimaLinha = linhasExistentes[linhasExistentes.length - 1];
+            const ultimaCondicaoInput = ultimaLinha ? ultimaLinha.querySelector('input[type="text"]') : null;
+
+            if (ultimaCondicaoInput && ultimaCondicaoInput.value.trim() === '') {
+                linhasContainer.insertBefore(novaLinha, ultimaLinha);
+            } else {
+                linhasContainer.appendChild(novaLinha);
+            }
+            novaLinha.querySelector('input[type="text"]').focus();
             return;
         }
 
