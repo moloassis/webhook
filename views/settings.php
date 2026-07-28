@@ -592,15 +592,37 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
                     <h3 class="panel-title" style="margin-top: 0; font-size: 1.1rem; color: var(--text-primary); margin-bottom: 0.4rem; display: flex; align-items: center; gap: 8px;">
                         🧭 Regras de Webhook
                     </h3>
-                    <p class="label-text" style="font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 1.2rem;">
+                    <p class="label-text" style="font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 0.8rem;">
                         Para cada tipo de evento recebido, defina a categoria do alerta e como ele deve ser exibido na tela.
-                        As regras de cada evento são avaliadas em ordem: a primeira cuja "condição" for vazia (curinga) ou cuja palavra-chave for encontrada vence.
                         <?php if ($webhookRegrasCustomizadas): ?>
                             <strong style="color: var(--color-lead);">Este tenant já possui regras customizadas.</strong>
                         <?php else: ?>
                             <strong>Nenhuma customização salva ainda — os valores abaixo refletem o comportamento padrão do sistema.</strong>
                         <?php endif; ?>
                     </p>
+
+                    <details class="webhook-regras-ajuda" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 10px; padding: 0.7rem 0.9rem; margin-bottom: 1.2rem;">
+                        <summary style="cursor: pointer; font-weight: 600; font-size: 0.82rem; color: var(--text-primary); list-style: none; display: flex; align-items: center; gap: 6px;">
+                            <span style="font-size: 0.7rem;">▶</span> Como funciona
+                        </summary>
+                        <div style="margin-top: 0.8rem; display: flex; flex-direction: column; gap: 0.6rem; font-size: 0.76rem; color: var(--text-secondary); line-height: 1.5;">
+                            <div>
+                                <strong style="color: var(--text-primary);">Ordem importa.</strong> Para cada evento, as regras do bloco são avaliadas de cima para baixo — a <strong>primeira</strong> cuja condição seja vazia (curinga, "sempre bate") ou cuja palavra-chave seja encontrada no texto do evento (tag, etapa do CRM ou última mensagem) é a que vale. Por isso a última linha de cada bloco costuma ser a curinga, funcionando como o "senão".
+                            </div>
+                            <div>
+                                <strong style="color: var(--text-primary);">Categoria</strong> define que tipo de alerta é criado (Atendimento Humano, Novo Lead, Novo Atendimento, Alerta Sistema) — ou escolha <strong>Ignorar</strong> para não criar alerta nenhum (o evento continua registrado no log).
+                            </div>
+                            <div>
+                                <strong style="color: var(--text-primary);">Modo de Exibição</strong> define como o alerta aparece na tela: <strong>Normal</strong> (card no grid), <strong>Urgente</strong> (modal em tela cheia + sirene) ou <strong>Silencioso</strong> (sem som e sem popup).
+                            </div>
+                            <div>
+                                <strong style="color: var(--color-atendimento);">Silencioso é absoluto:</strong> mesmo que a categoria seja Atendimento Humano e o cliente fique esperando além do prazo configurado, um alerta silencioso <strong>nunca</strong> dispara som, notificação ou tela cheia. O card e o aviso de "aguardando" continuam aparecendo normalmente no grid — só não fazem barulho.
+                            </div>
+                            <div>
+                                Use <strong style="color: var(--text-primary);">"+ Adicionar condição"</strong> para criar uma nova regra dentro de um bloco (ex.: uma palavra-chave extra que sua equipe usa) e posicione-a <strong>antes</strong> da curinga. Use <strong style="color: var(--text-primary);">"Restaurar Padrão do Sistema"</strong> para apagar toda a customização e voltar ao comportamento original.
+                            </div>
+                        </div>
+                    </details>
 
                     <?php
                     $categoriasLabelsWebhook = [
@@ -950,6 +972,14 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
         if (activeTabId) {
             activateTab(activeTabId);
         }
+    });
+
+    // Regras de Webhook: gira a seta do bloco "Como funciona" ao abrir/fechar
+    document.querySelectorAll('.webhook-regras-ajuda').forEach(function(det) {
+        const seta = det.querySelector('summary span');
+        det.addEventListener('toggle', function() {
+            if (seta) seta.textContent = det.open ? '▼' : '▶';
+        });
     });
 
     // Regras de Webhook: adicionar/remover linhas de condição dinamicamente
