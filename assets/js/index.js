@@ -354,7 +354,15 @@
         }
 
         // 2. Conectar com o SSE-STREAM (EventSource)
+        let sseReconnectTimeoutId = null;
+
         function iniciarConexaoSSE() {
+            // Cancela qualquer reconexão manual pendente antes de abrir uma nova conexão
+            if (sseReconnectTimeoutId) {
+                clearTimeout(sseReconnectTimeoutId);
+                sseReconnectTimeoutId = null;
+            }
+
             // Obtém o maior ID atual na lista local para sincronizar o cursor do stream
             const lastId = chamadosList.length > 0 ? Math.max(...chamadosList.map(c => c.id)) : 0;
 
@@ -375,19 +383,31 @@
                 console.log("SSE conectado com last_id:", lastId);
             };
 
-            // Quando ocorrem erros de conexão (ex: timeout da VPS, reinicializações de rede)
-            // O EventSource nativo reconecta AUTOMATICAMENTE em caso de falha.
+            // Quando ocorrem erros de conexão (ex: timeout de proxy/VPS, reinicializações de rede)
             source.onerror = function(err) {
                 statusBadge.className = 'status-badge disconnected';
                 statusText.textContent = 'Offline';
-                console.warn("SSE desconectado. Tentando reconectar automaticamente...", err);
+                console.warn("SSE desconectado.", err);
+
+                // Normalmente o EventSource nativo reconecta sozinho. Porém, se o servidor/proxy responder
+                // com um erro HTTP durante uma tentativa de reconexão (comum em hospedagens com timeout de
+                // conexões longas), o navegador marca a conexão como definitivamente fechada (readyState
+                // CLOSED) e para de tentar reconectar sozinho — travando o painel até um F5 manual.
+                // Nesse caso, recriamos a conexão manualmente após um pequeno atraso.
+                if (source.readyState === EventSource.CLOSED && !sseReconnectTimeoutId) {
+                    sseReconnectTimeoutId = setTimeout(() => {
+                        sseReconnectTimeoutId = null;
+                        console.log("Reconectando SSE manualmente após fechamento definitivo da conexão...");
+                        iniciarConexaoSSE();
+                    }, 5000);
+                }
             };
 
             // Ouvinte de mensagens SSE recebidas do endpoint PHP
             source.onmessage = function(event) {
                 try {
                     const data = JSON.parse(event.data);
-                    
+
                     if (data && data.action === 'resolve') {
                         // Remove o card da lista local
                         chamadosList = chamadosList.filter(item => item.id !== data.id);
@@ -400,6 +420,29 @@
                     console.error("Erro ao decodificar JSON do evento SSE:", e);
                 }
             };
+        }
+
+        // Rede de segurança: reconcilia periodicamente com o servidor via historico.php, garantindo que
+        // novos chamados apareçam (com som) mesmo se o canal SSE ficar preso silenciosamente sem avisar erro.
+        function reconciliarHistoricoFallback() {
+            fetch('historico.php')
+                .then(res => res.json())
+                .then(dados => {
+                    if (!Array.isArray(dados)) return;
+
+                    const idsAtuais = new Set(chamadosList.map(c => c.id));
+                    dados.filter(item => !idsAtuais.has(item.id)).forEach(item => adicionarChamado(item));
+
+                    // Remove localmente os que não estão mais pendentes no servidor (resolvidos por outra sessão)
+                    const idsServidor = new Set(dados.map(c => c.id));
+                    const tamanhoAntes = chamadosList.length;
+                    chamadosList = chamadosList.filter(c => idsServidor.has(c.id));
+                    if (chamadosList.length !== tamanhoAntes) {
+                        renderizarAlertas();
+                        atualizarContadores();
+                    }
+                })
+                .catch(err => console.warn("Falha na reconciliação de histórico (fallback):", err));
         }
 
         // 3. Processar novo Chamado/Evento e injetar no Dashboard
@@ -1239,6 +1282,9 @@
 
             // Atualiza os contadores de tempo e alertas de 5 minutos a cada 10 segundos
             setInterval(renderizarAlertas, 10000);
+
+            // Rede de segurança: reconcilia com o servidor a cada 20s caso o SSE fique preso silenciosamente
+            setInterval(reconciliarHistoricoFallback, 20000);
 
             // 5. Registra o Service Worker do PWA
             if ('serviceWorker' in navigator) {
