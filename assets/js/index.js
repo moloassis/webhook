@@ -793,6 +793,9 @@
         function gerenciarAlertasSonorosUrgentes() {
             const temUrgente = chamadosList.some(c => {
                 if (c.modo_exibicao === 'silencioso') return false; // modo silencioso é absoluto: nunca repete sirene
+                // Usuário sem permissão para resolver um chamado "aguardando" pode dispensar o modal localmente
+                // (minimizarAlertaAtrasoLocal); isso deve parar a sirene repetida também, não só esconder o modal.
+                if (alertasAtrasadosMinimizadosLocais.has(c.id)) return false;
                 const estilo = obterEstiloEvento(c);
                 return estilo.classe === 'type-atendimento_humano';
             });
