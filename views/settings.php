@@ -231,7 +231,15 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
                     <span class="tab-desc">Alertas sonoros da empresa</span>
                 </div>
             </button>
-            
+
+            <button type="button" class="settings-tab-btn" data-tab="tab-webhook-regras">
+                <span class="tab-icon">🧭</span>
+                <div class="tab-text">
+                    <span class="tab-title">Regras de Webhook</span>
+                    <span class="tab-desc">Categoria e exibição por evento</span>
+                </div>
+            </button>
+
             <button type="button" class="settings-tab-btn" data-tab="tab-equipe">
                 <span class="tab-icon">👥</span>
                 <div class="tab-text">
@@ -578,6 +586,94 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
                 </div>
             </div>
 
+            <!-- ABA: Regras de Webhook -->
+            <div id="tab-webhook-regras" class="settings-tab-content">
+                <div class="panel-box" style="background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 16px; padding: 1.5rem; backdrop-filter: blur(16px);">
+                    <h3 class="panel-title" style="margin-top: 0; font-size: 1.1rem; color: var(--text-primary); margin-bottom: 0.4rem; display: flex; align-items: center; gap: 8px;">
+                        🧭 Regras de Webhook
+                    </h3>
+                    <p class="label-text" style="font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 1.2rem;">
+                        Para cada tipo de evento recebido, defina a categoria do alerta e como ele deve ser exibido na tela.
+                        As regras de cada evento são avaliadas em ordem: a primeira cuja "condição" for vazia (curinga) ou cuja palavra-chave for encontrada vence.
+                        <?php if ($webhookRegrasCustomizadas): ?>
+                            <strong style="color: var(--color-lead);">Este tenant já possui regras customizadas.</strong>
+                        <?php else: ?>
+                            <strong>Nenhuma customização salva ainda — os valores abaixo refletem o comportamento padrão do sistema.</strong>
+                        <?php endif; ?>
+                    </p>
+
+                    <?php
+                    $categoriasLabelsWebhook = [
+                        'atendimento_humano' => '🚨 Atendimento Humano (urgente)',
+                        'novo_lead' => '💵 Novo Lead',
+                        'novo_atendimento' => 'ℹ️ Novo Atendimento',
+                        'alerta_sistema' => '⚠️ Alerta Sistema',
+                        'ignorar' => '🚫 Ignorar (não criar alerta)',
+                    ];
+                    $modosLabelsWebhook = [
+                        'normal' => 'Normal (card na tela)',
+                        'urgente_fullscreen' => 'Urgente (tela cheia)',
+                        'silencioso' => 'Silencioso (sem som/popup)',
+                    ];
+                    $eventosLabelsWebhook = [
+                        'SESSION_NEW' => 'Nova Conversa Iniciada',
+                        'MESSAGE_RECEIVED' => 'Mensagem Recebida do Cliente',
+                        'MESSAGE_SENT' => 'Mensagem Enviada (IA/Atendente)',
+                        'CONTACT_TAG_UPDATE' => 'Etiqueta Atualizada no CRM',
+                        'SESSION_COMPLETE' => 'Conversa com IA Finalizada',
+                        'PANEL_CARD_STEP_CHANGE' => 'Card Movido de Etapa (Kanban)',
+                        'PANEL_CARD_UPDATE' => 'Card Atualizado (Kanban)',
+                        'OUTRO' => 'Outros Eventos Não Mapeados',
+                    ];
+                    ?>
+
+                    <form id="webhookRulesForm" action="<?php echo htmlspecialchars($_SERVER['REQUEST_URI'], ENT_QUOTES, 'UTF-8'); ?>" method="POST" style="display: flex; flex-direction: column; gap: 1.4rem;">
+                        <?php echo renderizarCampoCSRF(); ?>
+                        <input type="hidden" name="action" value="save_webhook_rules">
+
+                        <?php foreach ($eventosLabelsWebhook as $tipoEvento => $labelEvento): ?>
+                            <div class="webhook-regra-grupo" data-tipo-evento="<?= htmlspecialchars($tipoEvento) ?>" style="border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem; display: flex; flex-direction: column; gap: 0.7rem;">
+                                <span class="label-text" style="font-weight: 600; font-size: 0.85rem; color: var(--text-primary);">
+                                    <?= htmlspecialchars($labelEvento) ?> <span style="font-weight: 400; color: var(--text-secondary); font-size: 0.72rem;">(<?= htmlspecialchars($tipoEvento) ?>)</span>
+                                </span>
+
+                                <div class="webhook-regra-linhas" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                    <?php $linhas = $webhookRegras[$tipoEvento] ?? [['condicao_palavras' => '', 'categoria' => 'ignorar', 'modo_exibicao' => 'normal']]; ?>
+                                    <?php foreach ($linhas as $idx => $linha): ?>
+                                        <div class="webhook-regra-linha" style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 0.5rem; align-items: center;">
+                                            <input type="text" name="regras[<?= htmlspecialchars($tipoEvento) ?>][<?= (int)$idx ?>][condicao]" value="<?= htmlspecialchars($linha['condicao_palavras'] ?? '') ?>" placeholder="Palavras-chave (vazio = sempre)" class="form-control" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.45rem; font-size: 0.78rem; color: var(--text-primary);">
+                                            <select name="regras[<?= htmlspecialchars($tipoEvento) ?>][<?= (int)$idx ?>][categoria]" class="form-control" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.45rem; font-size: 0.78rem; color: var(--text-primary);">
+                                                <?php foreach ($categoriasLabelsWebhook as $catVal => $catLabel): ?>
+                                                    <option value="<?= $catVal ?>" <?= (($linha['categoria'] ?? '') === $catVal) ? 'selected' : '' ?>><?= $catLabel ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                            <select name="regras[<?= htmlspecialchars($tipoEvento) ?>][<?= (int)$idx ?>][modo_exibicao]" class="form-control" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.45rem; font-size: 0.78rem; color: var(--text-primary);">
+                                                <?php foreach ($modosLabelsWebhook as $modoVal => $modoLabel): ?>
+                                                    <option value="<?= $modoVal ?>" <?= (($linha['modo_exibicao'] ?? '') === $modoVal) ? 'selected' : '' ?>><?= $modoLabel ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                            <button type="button" class="btn-inspect btn-remover-linha-regra" style="font-size: 0.7rem; padding: 0.35rem 0.5rem; border-radius: 6px; background: rgba(255, 71, 87, 0.15); border-color: rgba(255, 71, 87, 0.3); color: var(--color-atendimento);">✕</button>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+
+                                <button type="button" class="btn-inspect btn-adicionar-linha-regra" style="align-self: flex-start; font-size: 0.72rem; padding: 0.3rem 0.6rem; border-radius: 6px;">+ Adicionar condição</button>
+                            </div>
+                        <?php endforeach; ?>
+
+                        <button type="submit" class="btn-premium" style="width: 100%; margin: 0; padding: 0.7rem; font-weight: 600;">
+                            Salvar Regras de Webhook
+                        </button>
+                    </form>
+
+                    <form id="resetWebhookRulesForm" action="<?php echo htmlspecialchars($_SERVER['REQUEST_URI'], ENT_QUOTES, 'UTF-8'); ?>" method="POST" style="margin-top: 0.8rem;" onsubmit="return confirm('Restaurar as regras de webhook para o padrão do sistema? As customizações salvas serão apagadas.')">
+                        <?php echo renderizarCampoCSRF(); ?>
+                        <input type="hidden" name="action" value="reset_webhook_rules">
+                        <button type="submit" class="btn-inspect" style="width: 100%; padding: 0.5rem; font-size: 0.78rem;">Restaurar Padrão do Sistema</button>
+                    </form>
+                </div>
+            </div>
+
             <!-- ABA 5: Membros da Equipe -->
             <div id="tab-equipe" class="settings-tab-content">
                 <div class="panel-box" style="background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 16px; padding: 1.5rem; backdrop-filter: blur(16px);">
@@ -856,10 +952,50 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
         }
     });
 
+    // Regras de Webhook: adicionar/remover linhas de condição dinamicamente
+    document.addEventListener('click', function(e) {
+        const btnAdd = e.target.closest('.btn-adicionar-linha-regra');
+        if (btnAdd) {
+            const grupo = btnAdd.closest('.webhook-regra-grupo');
+            const tipoEvento = grupo.getAttribute('data-tipo-evento');
+            const linhasContainer = grupo.querySelector('.webhook-regra-linhas');
+            const novoIndice = Date.now();
+
+            const novaLinha = document.createElement('div');
+            novaLinha.className = 'webhook-regra-linha';
+            novaLinha.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 0.5rem; align-items: center;';
+            novaLinha.innerHTML = `
+                <input type="text" name="regras[${tipoEvento}][${novoIndice}][condicao]" placeholder="Palavras-chave (vazio = sempre)" class="form-control" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.45rem; font-size: 0.78rem; color: var(--text-primary);">
+                <select name="regras[${tipoEvento}][${novoIndice}][categoria]" class="form-control" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.45rem; font-size: 0.78rem; color: var(--text-primary);">
+                    <?php foreach ($categoriasLabelsWebhook as $catVal => $catLabel): ?>
+                        <option value="<?= $catVal ?>"><?= $catLabel ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <select name="regras[${tipoEvento}][${novoIndice}][modo_exibicao]" class="form-control" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.45rem; font-size: 0.78rem; color: var(--text-primary);">
+                    <?php foreach ($modosLabelsWebhook as $modoVal => $modoLabel): ?>
+                        <option value="<?= $modoVal ?>"><?= $modoLabel ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <button type="button" class="btn-inspect btn-remover-linha-regra" style="font-size: 0.7rem; padding: 0.35rem 0.5rem; border-radius: 6px; background: rgba(255, 71, 87, 0.15); border-color: rgba(255, 71, 87, 0.3); color: var(--color-atendimento);">✕</button>
+            `;
+            linhasContainer.appendChild(novaLinha);
+            return;
+        }
+
+        const btnRemove = e.target.closest('.btn-remover-linha-regra');
+        if (btnRemove) {
+            const linhasContainer = btnRemove.closest('.webhook-regra-linhas');
+            // Mantém ao menos uma linha por tipo de evento
+            if (linhasContainer.querySelectorAll('.webhook-regra-linha').length > 1) {
+                btnRemove.closest('.webhook-regra-linha').remove();
+            }
+        }
+    });
+
     // Submissão de Formulários via AJAX
     document.addEventListener('submit', function(e) {
         if (e.defaultPrevented) return;
-        
+
         const form = e.target;
         const actionInput = form.querySelector('input[name="action"]');
         if (!actionInput) return; // Ignora se não for formulário de ação
@@ -934,6 +1070,11 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
                 // Recarrega biblioteca de sons se necessário
                 if (actionVal === 'upload_audio' || actionVal === 'select_audio' || actionVal === 'delete_audio') {
                     reloadAudioLibrary();
+                }
+
+                // Restaurar padrão de regras de webhook: recarrega a página para exibir os valores restaurados
+                if (actionVal === 'reset_webhook_rules') {
+                    window.location.reload();
                 }
             }
         })

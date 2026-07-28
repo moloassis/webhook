@@ -127,9 +127,9 @@ while (true) {
     if ($needQuery) {
         try {
             // 4. Buscar chamados ativos (pendentes ou aguardando) deste tenant (empresa_id)
-            $sql = "SELECT id, nome_cliente, tipo, mensagem, session_id, status, criado_em 
-                    FROM chamados 
-                    WHERE status IN ('pendente', 'aguardando') AND empresa_id = :empresa_id 
+            $sql = "SELECT id, nome_cliente, tipo, categoria, modo_exibicao, mensagem, session_id, status, criado_em
+                    FROM chamados
+                    WHERE status IN ('pendente', 'aguardando') AND empresa_id = :empresa_id
                     ORDER BY id ASC";
             $stmt = $db->prepare($sql);
             $stmt->execute([':empresa_id' => $empresaId]);

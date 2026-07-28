@@ -6,6 +6,7 @@
 
 require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../helpers/tenant_context.php';
+require_once __DIR__ . '/../helpers/webhook_rules.php';
 
 $empresaId = (int)$_SESSION['tenant_ativo_id'];
 $isAdmin = ($_SESSION['usuario_role'] === 'admin' || $_SESSION['usuario_role'] === 'superadmin');
@@ -345,6 +346,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+        // AÇÃO: Salvar Regras de Webhook (categoria + modo de exibição por tipo de evento)
+        elseif ($action === 'save_webhook_rules') {
+            $regrasPost = isset($_POST['regras']) && is_array($_POST['regras']) ? $_POST['regras'] : [];
+            $tiposConhecidos = array_keys(regrasPadraoWebhook());
+            $eventosValidados = [];
+
+            foreach ($tiposConhecidos as $tipoEvento) {
+                if (!isset($regrasPost[$tipoEvento]) || !is_array($regrasPost[$tipoEvento])) {
+                    continue;
+                }
+
+                $linhasValidas = [];
+                foreach ($regrasPost[$tipoEvento] as $linha) {
+                    if (!is_array($linha)) {
+                        continue;
+                    }
+
+                    $categoria = trim((string)($linha['categoria'] ?? 'ignorar'));
+                    $modoExibicao = trim((string)($linha['modo_exibicao'] ?? 'normal'));
+                    $condicao = trim((string)($linha['condicao'] ?? ''));
+
+                    if (!in_array($categoria, CATEGORIAS_VALIDAS_WEBHOOK, true)) {
+                        continue;
+                    }
+                    if (!in_array($modoExibicao, MODOS_EXIBICAO_VALIDOS_WEBHOOK, true)) {
+                        continue;
+                    }
+
+                    $condicao = mb_substr($condicao, 0, 300);
+
+                    $linhasValidas[] = [
+                        'condicao_palavras' => $condicao,
+                        'categoria' => $categoria,
+                        'modo_exibicao' => $modoExibicao
+                    ];
+
+                    if (count($linhasValidas) >= 20) {
+                        break;
+                    }
+                }
+
+                if (!empty($linhasValidas)) {
+                    $eventosValidados[$tipoEvento] = $linhasValidas;
+                }
+            }
+
+            if (empty($eventosValidados)) {
+                $statusQuery = 'error=' . urlencode('Nenhuma regra válida foi enviada.');
+            } else {
+                $estrutura = ['schema_version' => 1, 'eventos' => $eventosValidados];
+                $ok = salvarConfiguracao('webhook_event_rules', json_encode($estrutura, JSON_UNESCAPED_UNICODE), $empresaId);
+                $statusQuery = $ok
+                    ? 'success=' . urlencode('Regras de webhook salvas com sucesso!')
+                    : 'error=' . urlencode('Falha ao salvar as regras de webhook.');
+            }
+        }
+
+        // AÇÃO: Restaurar Regras de Webhook para o padrão do sistema
+        elseif ($action === 'reset_webhook_rules') {
+            $ok = removerConfiguracao('webhook_event_rules', $empresaId);
+            $statusQuery = $ok
+                ? 'success=' . urlencode('Regras de webhook restauradas para o padrão do sistema!')
+                : 'error=' . urlencode('Falha ao restaurar as regras de webhook.');
+        }
+
         // AÇÃO: Upload de Áudio Customizado
         elseif ($action === 'upload_audio') {
             if (isset($_FILES['audio_file']) && $_FILES['audio_file']['error'] === UPLOAD_ERR_OK) {
@@ -615,6 +681,10 @@ $somSuporte = obterConfiguracao('audio_alerta_suporte', 'assets/audio/notificaca
 $somSuporteNome = basename($somSuporte);
 $somLead = obterConfiguracao('audio_alerta_lead', 'assets/audio/notificacao.mp3', $empresaId);
 $somLeadNome = basename($somLead);
+
+// Regras de webhook (categoria + modo de exibição por tipo de evento) — já cai no padrão se o tenant não customizou
+$webhookRegras = obterRegrasWebhook($empresaId);
+$webhookRegrasCustomizadas = !empty(obterConfiguracao('webhook_event_rules', null, $empresaId));
 
 // CRM settings
 $crmIntegrationEnabled = obterConfiguracao('crm_integration_enabled', '0', $empresaId);

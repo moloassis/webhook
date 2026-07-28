@@ -39,6 +39,8 @@ CREATE TABLE IF NOT EXISTS `chamados` (
     `empresa_id` INT NOT NULL,
     `nome_cliente` VARCHAR(255) DEFAULT NULL,
     `tipo` VARCHAR(100) NOT NULL DEFAULT 'atendimento_humano',
+    `categoria` VARCHAR(30) DEFAULT NULL,
+    `modo_exibicao` VARCHAR(20) NOT NULL DEFAULT 'normal',
     `mensagem` TEXT DEFAULT NULL,
     `session_id` VARCHAR(255) DEFAULT NULL,
     `status` ENUM('pendente', 'aguardando', 'resolvido') NOT NULL DEFAULT 'pendente',

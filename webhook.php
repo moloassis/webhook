@@ -12,6 +12,7 @@ header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers
 
 // Carrega o arquivo de conexão
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/helpers/webhook_rules.php';
 
 // Carrega dependências do Composer (necessário para WebPush)
 if (file_exists(__DIR__ . '/vendor/autoload.php')) {
@@ -163,9 +164,15 @@ if (isset($dados['content']['sessionId'])) {
     $sessionId = trim($dados['id']);
 }
 $criarChamadoAtivo = false; // Define se vai subir alerta com som na tela do atendente
+$categoria = 'ignorar';
+$modoExibicao = 'normal';
+$textoBusca = ''; // Texto usado pelo motor de regras (helpers/webhook_rules.php) para casar palavras-chave
 
 if ($eventType) {
-    // Processamento estruturado dos payloads reais do Made in AI
+    // Processamento estruturado dos payloads reais do Made in AI.
+    // Aqui só extraímos os campos do payload ($nomeCliente/$mensagem/$sessionId/$textoBusca);
+    // a decisão de criar chamado + categoria + modo de exibição é feita pelo motor de regras
+    // (avaliarRegrasWebhook), configurável por tenant, logo após o switch.
     switch ($eventType) {
         case 'MESSAGE_SENT':
             $tipoEvent = 'MESSAGE_SENT';
@@ -173,7 +180,6 @@ if ($eventType) {
             $origin = $dados['content']['origin'] ?? 'AI';
             $text = $dados['content']['text'] ?? '';
             $mensagem = "IA ({$origin}) enviou mensagem para {$to}: \"{$text}\"";
-            $criarChamadoAtivo = false; // Apenas informativo
 
             // Se uma resposta foi enviada pelo atendente humano (origem DEFAULT), encerra os chamados de suporte para este contato
             if ($origin === 'DEFAULT' && !empty($sessionId)) {
@@ -203,7 +209,6 @@ if ($eventType) {
             $text = $dados['content']['text'] ?? '';
             $nomeCliente = $from;
             $mensagem = "Cliente ({$from}) enviou: \"{$text}\"";
-            $criarChamadoAtivo = false; // Apenas informativo
             break;
 
         case 'SESSION_NEW':
@@ -211,7 +216,6 @@ if ($eventType) {
             $nomeCliente = $dados['content']['contactDetails']['name'] ?? 'Desconhecido';
             $phone = $dados['content']['contactDetails']['phonenumberFormatted'] ?? '';
             $mensagem = "Nova conversa iniciada pelo WhatsApp ({$phone}).";
-            $criarChamadoAtivo = true; // Exibe alerta suave
             break;
 
         case 'CONTACT_TAG_UPDATE':
@@ -223,13 +227,8 @@ if ($eventType) {
             $tagsMinusculas = array_map(function ($t) {
                 return mb_strtolower(trim($t)); }, $tags);
 
-            if (in_array('atendimento humano', $tagsMinusculas)) {
-                $mensagem = "Cliente etiquetado para Atendimento Humano no CRM.";
-                $criarChamadoAtivo = true; // Dispara alerta vermelho na tela do atendente
-            } else {
-                $mensagem = "Tags atualizadas do contato: " . implode(', ', $tags);
-                $criarChamadoAtivo = false; // Apenas entra no log de histórico
-            }
+            $textoBusca = implode(',', $tagsMinusculas);
+            $mensagem = "Tags atualizadas do contato: " . implode(', ', $tags);
             break;
 
         case 'SESSION_COMPLETE':
@@ -237,15 +236,8 @@ if ($eventType) {
             $nomeCliente = $dados['content']['contactDetails']['name'] ?? 'Desconhecido';
             $lastText = $dados['content']['lastMessageText'] ?? '';
 
-            // Verifica se houve transferência pelo texto da última mensagem
-            // Palavras-chave: "transferida", "aguarde", "humano", "suporte"
-            if (preg_match('/(transferida|aguarde|humano|suporte)/i', $lastText)) {
-                $mensagem = "Chatbot finalizado para transferência humana. Última msg: \"{$lastText}\"";
-                $criarChamadoAtivo = true; // Alerta URGENTE de atendimento humano
-            } else {
-                $mensagem = "Sessão do chatbot finalizada sem transferência. Última msg: \"{$lastText}\"";
-                $criarChamadoAtivo = false; // Apenas informativo
-            }
+            $textoBusca = $lastText;
+            $mensagem = "Sessão do chatbot finalizada. Última msg: \"{$lastText}\"";
             break;
 
         case 'PANEL_CARD_STEP_CHANGE':
@@ -254,27 +246,38 @@ if ($eventType) {
             $nomeCliente = $dados['content']['contacts'][0]['name'] ?? ($dados['content']['title'] ?? 'Lead');
             $stepTitle = $dados['content']['stepTitle'] ?? '';
 
-            // Verifica se a coluna de destino do card no CRM representa atendimento humano ou lead
-            if (preg_match('/(humano|suporte|atendente|human)/i', $stepTitle)) {
-                $mensagem = "Lead transferido para suporte humano na coluna: \"{$stepTitle}\"";
-                $criarChamadoAtivo = true;
-            } elseif (preg_match('/(lead|ia)/i', $stepTitle)) {
-                $mensagem = "Card movido para etapa de qualificação: \"{$stepTitle}\"";
-                $criarChamadoAtivo = true;
-            } else {
-                $mensagem = "Card movido no CRM para: \"{$stepTitle}\"";
-                $criarChamadoAtivo = false; // Apenas informativo
-            }
+            $textoBusca = $stepTitle;
+            $mensagem = "Card movido no CRM para: \"{$stepTitle}\"";
             break;
 
         default:
             $tipoEvent = $eventType;
             $mensagem = "Evento Made in AI não mapeado: \"{$eventType}\"";
-            $criarChamadoAtivo = false;
             break;
     }
+
+    require_once __DIR__ . '/helpers/webhook_rules.php';
+    $resultadoRegra = avaliarRegrasWebhook($eventType, $textoBusca, $empresaId);
+    $criarChamadoAtivo = $resultadoRegra['criar_chamado'];
+    $categoria = $resultadoRegra['categoria'];
+    $modoExibicao = $resultadoRegra['modo_exibicao'];
+
+    // Ajusta a redação da mensagem/log conforme a categoria resultante (apenas texto, não reclassifica)
+    if ($eventType === 'CONTACT_TAG_UPDATE' && $categoria === 'atendimento_humano') {
+        $mensagem = "Cliente etiquetado para Atendimento Humano no CRM.";
+    } elseif ($eventType === 'SESSION_COMPLETE' && $categoria === 'atendimento_humano') {
+        $mensagem = "Chatbot finalizado para transferência humana. Última msg: \"{$lastText}\"";
+    } elseif (in_array($eventType, ['PANEL_CARD_STEP_CHANGE', 'PANEL_CARD_UPDATE'], true)) {
+        if ($categoria === 'atendimento_humano') {
+            $mensagem = "Lead transferido para suporte humano na coluna: \"{$stepTitle}\"";
+        } elseif ($categoria === 'novo_lead') {
+            $mensagem = "Card movido para etapa de qualificação: \"{$stepTitle}\"";
+        }
+    }
 } else {
-    // FALLBACK: Mantém retrocompatibilidade com o simulador de webhook da interface ou disparos manuais
+    // FALLBACK: Mantém retrocompatibilidade com o simulador de webhook da interface ou disparos manuais.
+    // Não passa pelo motor de regras (não há eventType real do Made in AI) — a categoria é o próprio
+    // valor enviado pelo simulador/POST manual, preservando o comportamento histórico desse caminho.
     $nomeCliente = isset($dados['nome_cliente']) ? trim(filter_var($dados['nome_cliente'], FILTER_SANITIZE_SPECIAL_CHARS)) : null;
     $tipoEvent = isset($dados['tipo']) ? trim(filter_var($dados['tipo'], FILTER_SANITIZE_SPECIAL_CHARS)) : 'atendimento_humano';
     $mensagem = isset($dados['mensagem']) ? trim(filter_var($dados['mensagem'], FILTER_SANITIZE_SPECIAL_CHARS)) : null;
@@ -283,6 +286,8 @@ if ($eventType) {
     // Se tiver dados mínimos, cria o chamado ativo na tela
     if (!empty($nomeCliente) || !empty($mensagem)) {
         $criarChamadoAtivo = true;
+        $categoria = $tipoEvent;
+        $modoExibicao = ($tipoEvent === 'atendimento_humano') ? 'urgente_fullscreen' : 'normal';
     }
 }
 
@@ -339,13 +344,15 @@ if ($criarChamadoAtivo) {
             }
         }
 
-        $sql = "INSERT INTO chamados (empresa_id, nome_cliente, tipo, mensagem, session_id, status, criado_em) 
-                VALUES (:empresa_id, :nome_cliente, :tipo, :mensagem, :session_id, 'pendente', NOW())";
+        $sql = "INSERT INTO chamados (empresa_id, nome_cliente, tipo, categoria, modo_exibicao, mensagem, session_id, status, criado_em)
+                VALUES (:empresa_id, :nome_cliente, :tipo, :categoria, :modo_exibicao, :mensagem, :session_id, 'pendente', NOW())";
 
         $stmt = $db->prepare($sql);
         $stmt->bindValue(':empresa_id', $empresaId, PDO::PARAM_INT);
         $stmt->bindValue(':nome_cliente', $nomeCliente, PDO::PARAM_STR);
         $stmt->bindValue(':tipo', $tipoEvent, PDO::PARAM_STR);
+        $stmt->bindValue(':categoria', $categoria, PDO::PARAM_STR);
+        $stmt->bindValue(':modo_exibicao', $modoExibicao, PDO::PARAM_STR);
         $stmt->bindValue(':mensagem', $mensagem, PDO::PARAM_STR);
         $stmt->bindValue(':session_id', $sessionId, PDO::PARAM_STR);
 
@@ -356,6 +363,8 @@ if ($criarChamadoAtivo) {
                 'id' => $lastId,
                 'nome_cliente' => $nomeCliente,
                 'tipo' => $tipoEvent,
+                'categoria' => $categoria,
+                'modo_exibicao' => $modoExibicao,
                 'mensagem' => $mensagem,
                 'session_id' => $sessionId,
                 'status' => 'pendente'
@@ -369,7 +378,7 @@ if ($criarChamadoAtivo) {
             touch($flagDir . "/update_{$empresaId}.txt");
 
             // Envia notificações push em segundo plano para os atendentes inscritos
-            enviarPushNotificacoes($nomeCliente, $tipoEvent, $mensagem, $sessionId, (int)$empresaId);
+            enviarPushNotificacoes($nomeCliente, $categoria, $mensagem, $sessionId, (int)$empresaId);
 
             enviarRespostaELog(201, true, "Chamado ativo registrado e enviado ao painel.", $dadosSucesso, $dadosBrutos, $dados, (int)$empresaId);
         } else {
@@ -390,22 +399,30 @@ if ($criarChamadoAtivo) {
 /**
  * Enfileira notificações push na tabela push_queue para processamento assíncrono.
  */
-function enviarPushNotificacoes(?string $nomeCliente, string $tipo, ?string $mensagem, ?string $sessionId, int $empresaId): void
+function enviarPushNotificacoes(?string $nomeCliente, string $categoria, ?string $mensagem, ?string $sessionId, int $empresaId): void
 {
     try {
-        // Define o título e mensagem amigáveis para a notificação
-        $titulo = "🚨 Atendimento Humano Requerido";
-        $mensagemPush = "Cliente: " . ($nomeCliente ?? 'Desconhecido');
-        
-        // Formata a mensagem com base no tipo
-        if ($tipo === 'SESSION_NEW') {
-            $titulo = "ℹ️ Novo Atendimento Iniciado";
-            $mensagemPush = "Cliente: " . ($nomeCliente ?? 'Desconhecido');
-        } elseif (preg_match('/(lead|ia)/i', $mensagem)) {
-            $titulo = "💵 Novo Lead Qualificado";
-            $mensagemPush = "Lead: " . ($nomeCliente ?? 'Desconhecido');
+        // Define o título e mensagem amigáveis para a notificação, conforme a categoria já classificada
+        switch ($categoria) {
+            case 'novo_atendimento':
+                $titulo = "ℹ️ Novo Atendimento Iniciado";
+                $mensagemPush = "Cliente: " . ($nomeCliente ?? 'Desconhecido');
+                break;
+            case 'novo_lead':
+                $titulo = "💵 Novo Lead Qualificado";
+                $mensagemPush = "Lead: " . ($nomeCliente ?? 'Desconhecido');
+                break;
+            case 'alerta_sistema':
+                $titulo = "⚠️ Alerta do Sistema";
+                $mensagemPush = "Cliente: " . ($nomeCliente ?? 'Desconhecido');
+                break;
+            case 'atendimento_humano':
+            default:
+                $titulo = "🚨 Atendimento Humano Requerido";
+                $mensagemPush = "Cliente: " . ($nomeCliente ?? 'Desconhecido');
+                break;
         }
-        
+
         if (!empty($mensagem)) {
             // Limita a exibição do payload
             $resumoMsg = mb_strimwidth($mensagem, 0, 100, "...");

@@ -1,0 +1,113 @@
+============================================================
+{
+    "data": "2026-07-27 23:14:04",
+    "ip": "127.0.0.1",
+    "metodo": "POST",
+    "headers": {
+        "Host": "127.0.0.1:8099",
+        "User-Agent": "curl/8.16.0",
+        "Accept": "*/*",
+        "Content-Type": "application/json",
+        "Content-Length": "101"
+    },
+    "get": {
+        "token": "c651c2467d8b6fb6ad07a5436af77612"
+    },
+    "post_bruto": "{\"eventType\":\"CONTACT_TAG_UPDATE\",\"content\":{\"name\":\"Teste Cliente 1\",\"tags\":[\"Atendimento Humano\"]}}",
+    "post_decodificado": {
+        "eventType": "CONTACT_TAG_UPDATE",
+        "content": {
+            "name": "Teste Cliente 1",
+            "tags": [
+                "Atendimento Humano"
+            ]
+        }
+    }
+}
+============================================================
+
+============================================================
+{
+    "data": "2026-07-27 23:14:04",
+    "ip": "127.0.0.1",
+    "metodo": "POST",
+    "headers": {
+        "Host": "127.0.0.1:8099",
+        "User-Agent": "curl/8.16.0",
+        "Accept": "*/*",
+        "Content-Type": "application/json",
+        "Content-Length": "123"
+    },
+    "get": {
+        "token": "c651c2467d8b6fb6ad07a5436af77612"
+    },
+    "post_bruto": "{\"eventType\":\"SESSION_NEW\",\"content\":{\"contactDetails\":{\"name\":\"Teste Cliente 2\",\"phonenumberFormatted\":\"+5511999999999\"}}}",
+    "post_decodificado": {
+        "eventType": "SESSION_NEW",
+        "content": {
+            "contactDetails": {
+                "name": "Teste Cliente 2",
+                "phonenumberFormatted": "+5511999999999"
+            }
+        }
+    }
+}
+============================================================
+
+============================================================
+{
+    "data": "2026-07-27 23:14:04",
+    "ip": "127.0.0.1",
+    "metodo": "POST",
+    "headers": {
+        "Host": "127.0.0.1:8099",
+        "User-Agent": "curl/8.16.0",
+        "Accept": "*/*",
+        "Content-Type": "application/json",
+        "Content-Length": "100"
+    },
+    "get": {
+        "token": "c651c2467d8b6fb6ad07a5436af77612"
+    },
+    "post_bruto": "{\"eventType\":\"MESSAGE_SENT\",\"content\":{\"origin\":\"AI\",\"details\":{\"to\":\"5511999999999\"},\"text\":\"Ola\"}}",
+    "post_decodificado": {
+        "eventType": "MESSAGE_SENT",
+        "content": {
+            "origin": "AI",
+            "details": {
+                "to": "5511999999999"
+            },
+            "text": "Ola"
+        }
+    }
+}
+============================================================
+
+============================================================
+{
+    "data": "2026-07-27 23:14:24",
+    "ip": "127.0.0.1",
+    "metodo": "POST",
+    "headers": {
+        "Host": "127.0.0.1:8099",
+        "User-Agent": "curl/8.16.0",
+        "Accept": "*/*",
+        "Content-Type": "application/json",
+        "Content-Length": "110"
+    },
+    "get": {
+        "token": "c651c2467d8b6fb6ad07a5436af77612"
+    },
+    "post_bruto": "{\"eventType\":\"CONTACT_TAG_UPDATE\",\"content\":{\"name\":\"Teste Cliente Silencioso\",\"tags\":[\"Atendimento Humano\"]}}",
+    "post_decodificado": {
+        "eventType": "CONTACT_TAG_UPDATE",
+        "content": {
+            "name": "Teste Cliente Silencioso",
+            "tags": [
+                "Atendimento Humano"
+            ]
+        }
+    }
+}
+============================================================
+

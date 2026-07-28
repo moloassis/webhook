@@ -60,6 +60,26 @@ function obterConexao(bool $forcarReconexao = false): PDO {
                 // Silenciosamente ignora se a tabela chamados não existir ainda
             }
 
+            // Auto-migração/Self-healing para o campo categoria na tabela chamados (regras de webhook por tenant)
+            try {
+                $q = $pdo->query("SHOW COLUMNS FROM chamados LIKE 'categoria'");
+                if ($q && $q->rowCount() === 0) {
+                    $pdo->exec("ALTER TABLE chamados ADD COLUMN categoria VARCHAR(30) DEFAULT NULL AFTER tipo");
+                }
+            } catch (Exception $e) {
+                // Silenciosamente ignora se a tabela chamados não existir ainda
+            }
+
+            // Auto-migração/Self-healing para o campo modo_exibicao na tabela chamados (regras de webhook por tenant)
+            try {
+                $q = $pdo->query("SHOW COLUMNS FROM chamados LIKE 'modo_exibicao'");
+                if ($q && $q->rowCount() === 0) {
+                    $pdo->exec("ALTER TABLE chamados ADD COLUMN modo_exibicao VARCHAR(20) NOT NULL DEFAULT 'normal' AFTER categoria");
+                }
+            } catch (Exception $e) {
+                // Silenciosamente ignora se a tabela chamados não existir ainda
+            }
+
             // Auto-migração/Self-healing para criar a tabela de auditoria de inspeções
             try {
                 $pdo->exec("CREATE TABLE IF NOT EXISTS `superadmin_auditoria_logs` (
@@ -229,5 +249,44 @@ function salvarConfiguracao(string $chave, string $valor, ?int $empresaId = null
             ]);
             return false;
         }
+    }
+}
+
+/**
+ * Remove uma configuração salva no banco de dados para um tenant específico (restaura o padrão).
+ *
+ * @param string $chave Identificador da configuração.
+ * @param int|null $empresaId ID da empresa.
+ * @return bool
+ */
+function removerConfiguracao(string $chave, ?int $empresaId = null): bool
+{
+    // Resolução de tenant ativo
+    if ($empresaId === null) {
+        if (isset($_SESSION['tenant_ativo_id'])) {
+            $empresaId = (int)$_SESSION['tenant_ativo_id'];
+        } elseif (isset($_SESSION['empresa_id'])) {
+            $empresaId = (int)$_SESSION['empresa_id'];
+        }
+    }
+
+    if ($empresaId === null) {
+        registrarErro("Erro ao remover configuração '{$chave}': Empresa ID não resolvido.");
+        return false;
+    }
+
+    try {
+        $db = obterConexao();
+        $stmt = $db->prepare("DELETE FROM sistema_config WHERE empresa_id = :empresa_id AND chave = :chave");
+        return $stmt->execute([
+            ':empresa_id' => $empresaId,
+            ':chave' => $chave
+        ]);
+    } catch (Exception $e) {
+        registrarErro("Erro ao remover configuração do banco: " . $e->getMessage(), [
+            'empresa_id' => $empresaId,
+            'chave' => $chave
+        ]);
+        return false;
     }
 }

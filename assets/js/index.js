@@ -83,11 +83,24 @@
             return `${dia}/${mes}/${ano} ${hora}:${min}:${seg}`;
         }
 
+        // Categorias já classificadas pelo backend (helpers/webhook_rules.php) — mapeamento direto, sem regex.
+        const CATEGORIA_ESTILOS = {
+            atendimento_humano: { classe: 'type-atendimento_humano', icon: '🚨', label: 'Atendimento Humano' },
+            novo_lead:          { classe: 'type-novo_lead',          icon: '💵', label: 'Novo Lead' },
+            novo_atendimento:   { classe: 'type-default',            icon: 'ℹ️', label: 'Novo Atendimento' },
+            alerta_sistema:     { classe: 'type-alerta_sistema',     icon: '⚠️', label: 'Alerta Sistema' }
+        };
+
         // Helper para mapear o eventType bruto em estilo visual (classe, ícone, label)
         function obterEstiloEvento(item) {
+            // Itens já classificados no backend usam a categoria diretamente (sem re-derivar via regex)
+            if (item.categoria && CATEGORIA_ESTILOS[item.categoria]) {
+                return CATEGORIA_ESTILOS[item.categoria];
+            }
+
             const tipo = item.tipo;
             const msg = item.mensagem || '';
-            
+
             // Atendimento Humano (Urgente)
             if (tipo === 'atendimento_humano' || 
                 (tipo === 'CONTACT_TAG_UPDATE' && msg.includes('Atendimento Humano')) ||
@@ -396,19 +409,22 @@
 
             // Insere no início da array local (mais recente primeiro)
             chamadosList.unshift(chamado);
-            
-            // Toca a notificação correspondente baseando-se no estilo resolvido
-            const estilo = obterEstiloEvento(chamado);
-            if (estilo.classe === 'type-atendimento_humano') {
-                tocarAlertaSonoro('atendimento_humano');
-            } else if (estilo.classe === 'type-novo_lead') {
-                tocarAlertaSonoro('novo_lead');
-            } else if (estilo.classe === 'type-alerta_sistema') {
-                tocarAlertaSonoro('alerta_sistema');
-            } else {
-                tocarAlertaSonoro('default');
+
+            // Modo "silencioso" é absoluto: nunca toca som/notificação para este chamado
+            if (chamado.modo_exibicao !== 'silencioso') {
+                // Toca a notificação correspondente com base na categoria já classificada pelo backend
+                const categoria = chamado.categoria;
+                if (categoria === 'atendimento_humano') {
+                    tocarAlertaSonoro('atendimento_humano');
+                } else if (categoria === 'novo_lead') {
+                    tocarAlertaSonoro('novo_lead');
+                } else if (categoria === 'alerta_sistema') {
+                    tocarAlertaSonoro('alerta_sistema');
+                } else {
+                    tocarAlertaSonoro('default');
+                }
             }
-            
+
             // Atualiza a renderização na tela
             renderizarAlertas();
             atualizarContadores();
@@ -553,6 +569,10 @@
                  if (alertasAtrasadosMinimizadosLocais.has(c.id)) {
                      return false;
                  }
+                 // Modo "silencioso" é absoluto: nunca escala para o modal urgente, mesmo vencido o prazo
+                 if (c.modo_exibicao === 'silencioso') {
+                     return false;
+                 }
                  const estilo = obterEstiloEvento(c);
                  if (estilo.classe === 'type-atendimento_humano') {
                      const criadoEmDate = new Date(c.criado_em.replace(/-/g, "/"));
@@ -571,10 +591,10 @@
                  chamadoUrgente = chamadoAtrasado;
                  isAtrasado = true;
              } else {
-                 // 2. Se não houver atrasado, busca o chamado de atendimento humano que ainda está 'pendente' (não visto pelo operador)
+                 // 2. Se não houver atrasado, busca o chamado configurado como "urgente_fullscreen" que ainda está 'pendente'
+                 //    (não necessariamente Atendimento Humano — o admin pode configurar outras categorias para tela cheia)
                  chamadoUrgente = chamadosList.find(c => {
-                     const estilo = obterEstiloEvento(c);
-                     return estilo.classe === 'type-atendimento_humano' && c.status === 'pendente';
+                     return c.modo_exibicao === 'urgente_fullscreen' && c.status === 'pendente';
                  });
              }
  
@@ -588,8 +608,14 @@
                      document.getElementById('urgentModalMsg').textContent = `O cliente está aguardando atendimento há mais de ${minutosEspera} minutos sem receber resposta do suporte!`;
                  } else {
                      modalUrgente.classList.remove('atrasado');
-                     document.getElementById('urgentModalTitle').textContent = 'ATENDIMENTO HUMANO REQUERIDO';
-                     document.getElementById('urgentModalMsg').textContent = chamadoUrgente.mensagem || 'Requer suporte humano.';
+                     if (chamadoUrgente.categoria === 'atendimento_humano') {
+                         document.getElementById('urgentModalTitle').textContent = 'ATENDIMENTO HUMANO REQUERIDO';
+                     } else {
+                         // Categoria diferente configurada como tela cheia (ex.: Alerta Sistema) — título genérico
+                         const estiloUrgente = obterEstiloEvento(chamadoUrgente);
+                         document.getElementById('urgentModalTitle').textContent = `${estiloUrgente.icon} ${estiloUrgente.label.toUpperCase()}`;
+                     }
+                     document.getElementById('urgentModalMsg').textContent = chamadoUrgente.mensagem || 'Requer atenção imediata.';
                  }
                  
                  const horaFormatada = formatarDataHora(chamadoUrgente.criado_em);
@@ -693,9 +719,9 @@
                  if (estilo.classe === 'type-atendimento_humano') {
                      if (diffMinutes >= limiteMinutos) {
                          waitingHTML = `<span class="waiting-badge warning" style="animation: pulse-border 1.5s infinite; background: rgba(255, 71, 87, 0.15); color: #ff4757; font-weight: 600; font-size: 0.72rem; padding: 0.2rem 0.5rem; border-radius: 6px; border: 1px solid rgba(255, 71, 87, 0.3); display: inline-flex; align-items: center; gap: 4px;">⚠️ SEM RESPOSTA HÁ ${diffMinutes}m</span>`;
-                         
-                         // Envia notificação nativa uma única vez por chamado ao bater o limite
-                         if (!alertasEnviados.has(item.id)) {
+
+                         // Modo "silencioso" é absoluto: mostra o badge, mas nunca dispara som/notificação/push de escalonamento
+                         if (item.modo_exibicao !== 'silencioso' && !alertasEnviados.has(item.id)) {
                              alertasEnviados.add(item.id);
                              
                              // Dispara som de alerta urgente imediatamente
@@ -766,6 +792,7 @@
         // Inicia ou para o cronômetro da sirene baseado nos chamados urgentes ativos
         function gerenciarAlertasSonorosUrgentes() {
             const temUrgente = chamadosList.some(c => {
+                if (c.modo_exibicao === 'silencioso') return false; // modo silencioso é absoluto: nunca repete sirene
                 const estilo = obterEstiloEvento(c);
                 return estilo.classe === 'type-atendimento_humano';
             });
