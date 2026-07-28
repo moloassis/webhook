@@ -365,6 +365,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $categoria = trim((string)($linha['categoria'] ?? 'ignorar'));
                         $modoExibicao = trim((string)($linha['modo_exibicao'] ?? 'normal'));
                         $condicao = trim((string)($linha['condicao'] ?? ''));
+                        $rotulo = trim((string)($linha['rotulo'] ?? ''));
 
                         if (!in_array($categoria, CATEGORIAS_VALIDAS_WEBHOOK, true)) {
                             continue;
@@ -374,11 +375,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
 
                         $condicao = mb_substr($condicao, 0, 300);
+                        $rotulo = mb_substr($rotulo, 0, 60);
 
                         $linhasValidas[] = [
                             'condicao_palavras' => $condicao,
                             'categoria' => $categoria,
-                            'modo_exibicao' => $modoExibicao
+                            'modo_exibicao' => $modoExibicao,
+                            'rotulo' => $rotulo
                         ];
 
                         if (count($linhasValidas) >= 20) {
@@ -693,6 +696,7 @@ $somLeadNome = basename($somLead);
 $webhookRegras = obterRegrasWebhook($empresaId);
 $webhookRegrasCustomizadas = !empty(obterConfiguracao('webhook_event_rules', null, $empresaId));
 $webhookDedupModos = obterModosDedupWebhook($empresaId);
+$webhookTiposCustomizados = obterTiposCustomizadosWebhook($empresaId);
 
 // CRM settings
 $crmIntegrationEnabled = obterConfiguracao('crm_integration_enabled', '0', $empresaId);

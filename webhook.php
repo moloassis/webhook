@@ -166,6 +166,7 @@ if (isset($dados['content']['sessionId'])) {
 $criarChamadoAtivo = false; // Define se vai subir alerta com som na tela do atendente
 $categoria = 'ignorar';
 $modoExibicao = 'normal';
+$rotulo = ''; // Rótulo customizado exibido no lugar do nome padrão da categoria (vazio = usar o padrão)
 $textoBusca = ''; // Texto usado pelo motor de regras (helpers/webhook_rules.php) para casar palavras-chave
 
 if ($eventType) {
@@ -271,6 +272,7 @@ if ($eventType) {
     $criarChamadoAtivo = $resultadoRegra['criar_chamado'];
     $categoria = $resultadoRegra['categoria'];
     $modoExibicao = $resultadoRegra['modo_exibicao'];
+    $rotulo = $resultadoRegra['rotulo'];
 
     // Ajusta a redação da mensagem/log conforme a categoria resultante (apenas texto, não reclassifica)
     if (in_array($eventType, ['CONTACT_TAG_UPDATE', 'CONTACT_UPDATE'], true) && $categoria === 'atendimento_humano') {
@@ -300,6 +302,7 @@ if ($eventType) {
         $criarChamadoAtivo = true;
         $categoria = $tipoEvent;
         $modoExibicao = ($tipoEvent === 'atendimento_humano') ? 'urgente_fullscreen' : 'normal';
+        $rotulo = ''; // Caminho legado/simulador não passa pelo motor de regras, sem rótulo customizado disponível
     }
 }
 
@@ -363,8 +366,8 @@ if ($criarChamadoAtivo) {
             }
         }
 
-        $sql = "INSERT INTO chamados (empresa_id, nome_cliente, tipo, categoria, modo_exibicao, mensagem, session_id, status, criado_em)
-                VALUES (:empresa_id, :nome_cliente, :tipo, :categoria, :modo_exibicao, :mensagem, :session_id, 'pendente', NOW())";
+        $sql = "INSERT INTO chamados (empresa_id, nome_cliente, tipo, categoria, modo_exibicao, rotulo, mensagem, session_id, status, criado_em)
+                VALUES (:empresa_id, :nome_cliente, :tipo, :categoria, :modo_exibicao, :rotulo, :mensagem, :session_id, 'pendente', NOW())";
 
         $stmt = $db->prepare($sql);
         $stmt->bindValue(':empresa_id', $empresaId, PDO::PARAM_INT);
@@ -372,6 +375,7 @@ if ($criarChamadoAtivo) {
         $stmt->bindValue(':tipo', $tipoEvent, PDO::PARAM_STR);
         $stmt->bindValue(':categoria', $categoria, PDO::PARAM_STR);
         $stmt->bindValue(':modo_exibicao', $modoExibicao, PDO::PARAM_STR);
+        $stmt->bindValue(':rotulo', $rotulo !== '' ? $rotulo : null, $rotulo !== '' ? PDO::PARAM_STR : PDO::PARAM_NULL);
         $stmt->bindValue(':mensagem', $mensagem, PDO::PARAM_STR);
         $stmt->bindValue(':session_id', $sessionId, PDO::PARAM_STR);
 
@@ -384,6 +388,7 @@ if ($criarChamadoAtivo) {
                 'tipo' => $tipoEvent,
                 'categoria' => $categoria,
                 'modo_exibicao' => $modoExibicao,
+                'rotulo' => $rotulo !== '' ? $rotulo : null,
                 'mensagem' => $mensagem,
                 'session_id' => $sessionId,
                 'status' => 'pendente'
@@ -397,7 +402,7 @@ if ($criarChamadoAtivo) {
             touch($flagDir . "/update_{$empresaId}.txt");
 
             // Envia notificações push em segundo plano para os atendentes inscritos
-            enviarPushNotificacoes($nomeCliente, $categoria, $mensagem, $sessionId, (int)$empresaId);
+            enviarPushNotificacoes($nomeCliente, $categoria, $mensagem, $sessionId, (int)$empresaId, $rotulo);
 
             enviarRespostaELog(201, true, "Chamado ativo registrado e enviado ao painel.", $dadosSucesso, $dadosBrutos, $dados, (int)$empresaId);
         } else {
@@ -418,28 +423,37 @@ if ($criarChamadoAtivo) {
 /**
  * Enfileira notificações push na tabela push_queue para processamento assíncrono.
  */
-function enviarPushNotificacoes(?string $nomeCliente, string $categoria, ?string $mensagem, ?string $sessionId, int $empresaId): void
+function enviarPushNotificacoes(?string $nomeCliente, string $categoria, ?string $mensagem, ?string $sessionId, int $empresaId, string $rotuloCustom = ''): void
 {
     try {
         // Define o título e mensagem amigáveis para a notificação, conforme a categoria já classificada
         switch ($categoria) {
             case 'novo_atendimento':
+                $icone = 'ℹ️';
                 $titulo = "ℹ️ Novo Atendimento Iniciado";
                 $mensagemPush = "Cliente: " . ($nomeCliente ?? 'Desconhecido');
                 break;
             case 'novo_lead':
+                $icone = '💵';
                 $titulo = "💵 Novo Lead Qualificado";
                 $mensagemPush = "Lead: " . ($nomeCliente ?? 'Desconhecido');
                 break;
             case 'alerta_sistema':
+                $icone = '⚠️';
                 $titulo = "⚠️ Alerta do Sistema";
                 $mensagemPush = "Cliente: " . ($nomeCliente ?? 'Desconhecido');
                 break;
             case 'atendimento_humano':
             default:
+                $icone = '🚨';
                 $titulo = "🚨 Atendimento Humano Requerido";
                 $mensagemPush = "Cliente: " . ($nomeCliente ?? 'Desconhecido');
                 break;
+        }
+
+        // Rótulo customizado (definido na regra de webhook do tenant) substitui o nome padrão da categoria
+        if ($rotuloCustom !== '') {
+            $titulo = "{$icone} {$rotuloCustom}";
         }
 
         if (!empty($mensagem)) {

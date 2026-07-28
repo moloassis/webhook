@@ -27,7 +27,7 @@ try {
     $db = obterConexao();
     
     // Busca os chamados ativos (pendentes ou aguardando) vinculados a este tenant específico
-    $sql = "SELECT id, nome_cliente, tipo, categoria, modo_exibicao, mensagem, session_id, status, criado_em
+    $sql = "SELECT id, nome_cliente, tipo, categoria, modo_exibicao, rotulo, mensagem, session_id, status, criado_em
             FROM chamados
             WHERE status IN ('pendente', 'aguardando') AND empresa_id = :empresa_id
             ORDER BY id DESC LIMIT 50";

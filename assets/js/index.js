@@ -96,7 +96,12 @@
         function obterEstiloEvento(item) {
             // Itens já classificados no backend usam a categoria diretamente (sem re-derivar via regex)
             if (item.categoria && CATEGORIA_ESTILOS[item.categoria]) {
-                return CATEGORIA_ESTILOS[item.categoria];
+                const estiloBase = CATEGORIA_ESTILOS[item.categoria];
+                // Rótulo customizado da regra substitui o nome padrão da categoria (sem mutar o objeto compartilhado)
+                if (item.rotulo) {
+                    return { ...estiloBase, label: item.rotulo };
+                }
+                return estiloBase;
             }
 
             const tipo = item.tipo;
@@ -650,18 +655,18 @@
                      modalUrgente.classList.add('atrasado');
                      document.getElementById('urgentModalTitle').textContent = '⚠️ ALERTA: CLIENTE SEM RESPOSTA!';
                      document.getElementById('urgentModalMsg').textContent = `O cliente está aguardando atendimento há mais de ${minutosEspera} minutos sem receber resposta do suporte!`;
-                 } else {
-                     modalUrgente.classList.remove('atrasado');
-                     if (chamadoUrgente.categoria === 'atendimento_humano') {
-                         document.getElementById('urgentModalTitle').textContent = 'ATENDIMENTO HUMANO REQUERIDO';
-                     } else {
-                         // Categoria diferente configurada como tela cheia (ex.: Alerta Sistema) — título genérico
-                         const estiloUrgente = obterEstiloEvento(chamadoUrgente);
-                         document.getElementById('urgentModalTitle').textContent = `${estiloUrgente.icon} ${estiloUrgente.label.toUpperCase()}`;
-                     }
-                     document.getElementById('urgentModalMsg').textContent = chamadoUrgente.mensagem || 'Requer atenção imediata.';
-                 }
-                 
+                } else {
+                    modalUrgente.classList.remove('atrasado');
+                    if (!chamadoUrgente.rotulo && chamadoUrgente.categoria === 'atendimento_humano') {
+                        // Sem rótulo customizado: mantém a frase fixa dramática de sempre
+                        document.getElementById('urgentModalTitle').textContent = 'ATENDIMENTO HUMANO REQUERIDO';
+                    } else {
+                        // Rótulo customizado (qualquer categoria) ou categoria diferente configurada como tela cheia
+                        const estiloUrgente = obterEstiloEvento(chamadoUrgente);
+                        document.getElementById('urgentModalTitle').textContent = `${estiloUrgente.icon} ${estiloUrgente.label.toUpperCase()}`;
+                    }
+                    document.getElementById('urgentModalMsg').textContent = chamadoUrgente.mensagem || 'Requer atenção imediata.';
+                }                 
                  const horaFormatada = formatarDataHora(chamadoUrgente.criado_em);
                  
                  if (isAtrasado) {

@@ -111,6 +111,49 @@ function obterRegrasWebhook(int $empresaId): array
 }
 
 /**
+ * Retorna os tipos de evento que o tenant customizou explicitamente (regras e/ou modo de deduplicação) —
+ * usado apenas para decidir quais seções abrir automaticamente na tela de configurações, não afeta o
+ * comportamento de avaliação dos webhooks.
+ *
+ * @return array<int, string>
+ */
+function obterTiposCustomizadosWebhook(int $empresaId): array
+{
+    $configBruta = obterConfiguracao('webhook_event_rules', null, $empresaId);
+    if (empty($configBruta)) {
+        return [];
+    }
+
+    try {
+        $decodificado = json_decode($configBruta, true, 512, JSON_THROW_ON_ERROR);
+    } catch (\JsonException $e) {
+        return [];
+    }
+
+    if (!is_array($decodificado)) {
+        return [];
+    }
+
+    $tipos = [];
+    if (isset($decodificado['eventos']) && is_array($decodificado['eventos'])) {
+        foreach (array_keys($decodificado['eventos']) as $tipoEvento) {
+            if (is_string($tipoEvento)) {
+                $tipos[] = $tipoEvento;
+            }
+        }
+    }
+    if (isset($decodificado['dedup_modos']) && is_array($decodificado['dedup_modos'])) {
+        foreach (array_keys($decodificado['dedup_modos']) as $tipoEvento) {
+            if (is_string($tipoEvento)) {
+                $tipos[] = $tipoEvento;
+            }
+        }
+    }
+
+    return array_values(array_unique($tipos));
+}
+
+/**
  * Carrega o modo de deduplicação customizado por tipo de evento (chave "dedup_modos" dentro do
  * mesmo blob JSON de `webhook_event_rules`). Tipos não customizados não aparecem no retorno —
  * quem chama deve tratar a ausência como o padrão 'unificar'.
@@ -157,7 +200,7 @@ function obterModoDedupEvento(string $eventType, int $empresaId): string
  * Avalia as regras de um tenant para um evento recebido e retorna a classificação resultante.
  * Primeira regra cuja condição seja vazia (curinga) ou cuja palavra-chave apareça em $textoBusca vence.
  *
- * @return array{categoria: string, modo_exibicao: string, criar_chamado: bool}
+ * @return array{categoria: string, modo_exibicao: string, rotulo: string, criar_chamado: bool}
  */
 function avaliarRegrasWebhook(string $eventType, string $textoBusca, int $empresaId): array
 {
@@ -180,20 +223,25 @@ function avaliarRegrasWebhook(string $eventType, string $textoBusca, int $empres
         }
     }
 
-    return ['categoria' => 'ignorar', 'modo_exibicao' => 'normal', 'criar_chamado' => false];
+    return ['categoria' => 'ignorar', 'modo_exibicao' => 'normal', 'rotulo' => '', 'criar_chamado' => false];
 }
 
 /**
  * Normaliza e valida uma regra individual antes de retornar o resultado da avaliação.
+ *
+ * @return array{categoria: string, modo_exibicao: string, rotulo: string, criar_chamado: bool}
  */
 function montarResultadoRegra(array $regra): array
 {
     $categoria = in_array($regra['categoria'] ?? '', CATEGORIAS_VALIDAS_WEBHOOK, true) ? $regra['categoria'] : 'ignorar';
     $modoExibicao = in_array($regra['modo_exibicao'] ?? '', MODOS_EXIBICAO_VALIDOS_WEBHOOK, true) ? $regra['modo_exibicao'] : 'normal';
+    // Rótulo customizado exibido no lugar do nome padrão da categoria (vazio = usar o nome padrão)
+    $rotulo = trim((string)($regra['rotulo'] ?? ''));
 
     return [
         'categoria' => $categoria,
         'modo_exibicao' => $modoExibicao,
+        'rotulo' => $rotulo,
         'criar_chamado' => ($categoria !== 'ignorar'),
     ];
 }

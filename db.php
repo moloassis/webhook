@@ -80,6 +80,16 @@ function obterConexao(bool $forcarReconexao = false): PDO {
                 // Silenciosamente ignora se a tabela chamados não existir ainda
             }
 
+            // Auto-migração/Self-healing para o campo rotulo na tabela chamados (rótulo customizado por regra de webhook)
+            try {
+                $q = $pdo->query("SHOW COLUMNS FROM chamados LIKE 'rotulo'");
+                if ($q && $q->rowCount() === 0) {
+                    $pdo->exec("ALTER TABLE chamados ADD COLUMN rotulo VARCHAR(100) DEFAULT NULL AFTER modo_exibicao");
+                }
+            } catch (Exception $e) {
+                // Silenciosamente ignora se a tabela chamados não existir ainda
+            }
+
             // Auto-migração/Self-healing para criar a tabela de auditoria de inspeções
             try {
                 $pdo->exec("CREATE TABLE IF NOT EXISTS `superadmin_auditoria_logs` (

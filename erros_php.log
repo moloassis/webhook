@@ -19,3 +19,12 @@ Stack trace:
 [28-Jul-2026 13:13:54 America/Sao_Paulo] PHP Warning:  session_save_path(): Session save path cannot be changed when a session is active in Command line code on line 3
 [28-Jul-2026 13:13:54 America/Sao_Paulo] PHP Notice:  session_start(): Ignoring session_start() because a session is already active (started from C:\Users\Moloise\OneDrive\www\webhook\helpers\security.php on line 8) in Command line code on line 4
 [28-Jul-2026 13:13:54 America/Sao_Paulo] PHP Warning:  file_put_contents(C:/Users/Moloise/AppData/Local/Temp/claude/c--Users-Moloise-OneDrive-www-webhook/d78300d9-d3d2-471c-9b0c-55abdc81c310/scratchpad/sess_info.txt): Failed to open stream: No such file or directory in Command line code on line 24
+[28-Jul-2026 14:12:06 America/Sao_Paulo] PHP Warning:  session_save_path(): Session save path cannot be changed when a session is active in Command line code on line 3
+[28-Jul-2026 14:12:06 America/Sao_Paulo] PHP Notice:  session_start(): Ignoring session_start() because a session is already active (started from C:\Users\Moloise\OneDrive\www\webhook\helpers\security.php on line 8) in Command line code on line 4
+[28-Jul-2026 14:15:57 America/Sao_Paulo] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'mensagem' in 'where clause' in Command line code:6
+Stack trace:
+#0 Command line code(6): PDO->exec('DELETE FROM pus...')
+#1 {main}
+  thrown in Command line code on line 6
+[28-Jul-2026 14:25:12 America/Sao_Paulo] PHP Warning:  session_save_path(): Session save path cannot be changed when a session is active in Command line code on line 3
+[28-Jul-2026 14:25:12 America/Sao_Paulo] PHP Notice:  session_start(): Ignoring session_start() because a session is already active (started from C:\Users\Moloise\OneDrive\www\webhook\helpers\security.php on line 8) in Command line code on line 4

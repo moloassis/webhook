@@ -514,3 +514,59 @@
 }
 ============================================================
 
+============================================================
+{
+    "data": "2026-07-28 14:15:16",
+    "ip": "127.0.0.1",
+    "metodo": "POST",
+    "headers": {
+        "Host": "127.0.0.1:8099",
+        "User-Agent": "curl/8.16.0",
+        "Accept": "*/*",
+        "Content-Type": "application/json",
+        "Content-Length": "103"
+    },
+    "get": {
+        "token": "83314c388937710729fbd503ab60085e"
+    },
+    "post_bruto": "{\"eventType\":\"MESSAGE_RECEIVED\",\"content\":{\"details\":{\"from\":\"+5511900001111\"},\"text\":\"oi, tudo bem?\"}}",
+    "post_decodificado": {
+        "eventType": "MESSAGE_RECEIVED",
+        "content": {
+            "details": {
+                "from": "+5511900001111"
+            },
+            "text": "oi, tudo bem?"
+        }
+    }
+}
+============================================================
+
+============================================================
+{
+    "data": "2026-07-28 14:15:37",
+    "ip": "127.0.0.1",
+    "metodo": "POST",
+    "headers": {
+        "Host": "127.0.0.1:8099",
+        "User-Agent": "curl/8.16.0",
+        "Accept": "*/*",
+        "Content-Type": "application/json",
+        "Content-Length": "102"
+    },
+    "get": {
+        "token": "83314c388937710729fbd503ab60085e"
+    },
+    "post_bruto": "{\"eventType\":\"CONTACT_TAG_UPDATE\",\"content\":{\"name\":\"Teste Sem Rotulo\",\"tags\":[\"Atendimento Humano\"]}}",
+    "post_decodificado": {
+        "eventType": "CONTACT_TAG_UPDATE",
+        "content": {
+            "name": "Teste Sem Rotulo",
+            "tags": [
+                "Atendimento Humano"
+            ]
+        }
+    }
+}
+============================================================
+

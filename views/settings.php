@@ -613,6 +613,9 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
                                 <strong style="color: var(--text-primary);">Modo de Exibição</strong> define como o alerta aparece na tela: <strong>Normal</strong> (card no grid), <strong>Urgente</strong> (modal em tela cheia + sirene) ou <strong>Silencioso</strong> (sem som e sem popup).
                             </div>
                             <div>
+                                <strong style="color: var(--text-primary);">Rótulo customizado</strong> (opcional) substitui o nome padrão da categoria no card, no modal e nas notificações push — útil quando você usa uma categoria só pelo efeito visual/sonoro (ex.: mapear "Mensagem Recebida" para Atendimento Humano/Urgente) mas o texto "Atendimento Humano" não descreve o que realmente aconteceu. Deixe vazio para manter o nome padrão da categoria.
+                            </div>
+                            <div>
                                 <strong style="color: var(--color-atendimento);">Silencioso é absoluto:</strong> mesmo que a categoria seja Atendimento Humano e o cliente fique esperando além do prazo configurado, um alerta silencioso <strong>nunca</strong> dispara som, notificação ou tela cheia. O card e o aviso de "aguardando" continuam aparecendo normalmente no grid — só não fazem barulho.
                             </div>
                             <div style="background: rgba(255,255,255,0.03); border-left: 3px solid var(--color-lead); border-radius: 6px; padding: 0.6rem 0.8rem;">
@@ -665,27 +668,41 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
 
                         <?php $tiposMudancaDeCard = ['PANEL_CARD_STEP_CHANGE', 'PANEL_CARD_UPDATE', 'PANEL_CARD_NEW']; ?>
                         <?php foreach ($eventosLabelsWebhook as $tipoEvento => $labelEvento): ?>
-                            <div class="webhook-regra-grupo" data-tipo-evento="<?= htmlspecialchars($tipoEvento) ?>" style="border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem; display: flex; flex-direction: column; gap: 0.7rem;">
-                                <span class="label-text" style="font-weight: 600; font-size: 0.85rem; color: var(--text-primary);">
-                                    <?= htmlspecialchars($labelEvento) ?> <span style="font-weight: 400; color: var(--text-secondary); font-size: 0.72rem;">(<?= htmlspecialchars($tipoEvento) ?>)</span>
-                                </span>
+                            <?php $tipoCustomizado = in_array($tipoEvento, $webhookTiposCustomizados, true); ?>
+                            <details class="webhook-regra-grupo" data-tipo-evento="<?= htmlspecialchars($tipoEvento) ?>" <?= $tipoCustomizado ? 'open' : '' ?> style="border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden;">
+                                <summary style="cursor: pointer; list-style: none; padding: 0.8rem 1rem; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                                    <span class="label-text" style="font-weight: 600; font-size: 0.85rem; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+                                        <?= htmlspecialchars($labelEvento) ?> <span style="font-weight: 400; color: var(--text-secondary); font-size: 0.72rem;">(<?= htmlspecialchars($tipoEvento) ?>)</span>
+                                        <?php if ($tipoCustomizado): ?>
+                                            <span class="badge badge-success" style="font-size: 0.62rem; padding: 0.15rem 0.45rem; background: var(--color-lead); border-color: var(--color-lead);">Customizado</span>
+                                        <?php endif; ?>
+                                    </span>
+                                    <span class="webhook-regra-seta" style="font-size: 0.7rem; color: var(--text-secondary); flex-shrink: 0;"><?= $tipoCustomizado ? '▼' : '▶' ?></span>
+                                </summary>
+
+                                <div style="padding: 0 1rem 1rem 1rem; display: flex; flex-direction: column; gap: 0.7rem;">
 
                                 <div class="webhook-regra-linhas" style="display: flex; flex-direction: column; gap: 0.5rem;">
-                                    <?php $linhas = $webhookRegras[$tipoEvento] ?? [['condicao_palavras' => '', 'categoria' => 'ignorar', 'modo_exibicao' => 'normal']]; ?>
+                                    <?php $linhas = $webhookRegras[$tipoEvento] ?? [['condicao_palavras' => '', 'categoria' => 'ignorar', 'modo_exibicao' => 'normal', 'rotulo' => '']]; ?>
                                     <?php foreach ($linhas as $idx => $linha): ?>
-                                        <div class="webhook-regra-linha" style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 0.5rem; align-items: center;">
-                                            <input type="text" name="regras[<?= htmlspecialchars($tipoEvento) ?>][<?= (int)$idx ?>][condicao]" value="<?= htmlspecialchars($linha['condicao_palavras'] ?? '') ?>" placeholder="Palavras-chave (vazio = sempre)" class="form-control" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.45rem; font-size: 0.78rem; color: var(--text-primary);">
-                                            <select name="regras[<?= htmlspecialchars($tipoEvento) ?>][<?= (int)$idx ?>][categoria]" class="form-control" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.45rem; font-size: 0.78rem; color: var(--text-primary);">
-                                                <?php foreach ($categoriasLabelsWebhook as $catVal => $catLabel): ?>
-                                                    <option value="<?= $catVal ?>" <?= (($linha['categoria'] ?? '') === $catVal) ? 'selected' : '' ?>><?= $catLabel ?></option>
-                                                <?php endforeach; ?>
-                                            </select>
-                                            <select name="regras[<?= htmlspecialchars($tipoEvento) ?>][<?= (int)$idx ?>][modo_exibicao]" class="form-control" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.45rem; font-size: 0.78rem; color: var(--text-primary);">
-                                                <?php foreach ($modosLabelsWebhook as $modoVal => $modoLabel): ?>
-                                                    <option value="<?= $modoVal ?>" <?= (($linha['modo_exibicao'] ?? '') === $modoVal) ? 'selected' : '' ?>><?= $modoLabel ?></option>
-                                                <?php endforeach; ?>
-                                            </select>
-                                            <button type="button" class="btn-inspect btn-remover-linha-regra" style="font-size: 0.7rem; padding: 0.35rem 0.5rem; border-radius: 6px; background: rgba(255, 71, 87, 0.15); border-color: rgba(255, 71, 87, 0.3); color: var(--color-atendimento);">✕</button>
+                                        <div class="webhook-regra-linha" style="display: flex; flex-direction: column; gap: 0.4rem; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 8px;">
+                                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                                                <input type="text" name="regras[<?= htmlspecialchars($tipoEvento) ?>][<?= (int)$idx ?>][condicao]" value="<?= htmlspecialchars($linha['condicao_palavras'] ?? '') ?>" placeholder="Palavras-chave (vazio = sempre)" class="form-control" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.45rem; font-size: 0.78rem; color: var(--text-primary);">
+                                                <input type="text" name="regras[<?= htmlspecialchars($tipoEvento) ?>][<?= (int)$idx ?>][rotulo]" value="<?= htmlspecialchars($linha['rotulo'] ?? '') ?>" placeholder="Rótulo customizado (opcional, padrão = nome da categoria)" maxlength="60" class="form-control" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.45rem; font-size: 0.78rem; color: var(--text-primary);">
+                                            </div>
+                                            <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.5rem; align-items: center;">
+                                                <select name="regras[<?= htmlspecialchars($tipoEvento) ?>][<?= (int)$idx ?>][categoria]" class="form-control" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.45rem; font-size: 0.78rem; color: var(--text-primary);">
+                                                    <?php foreach ($categoriasLabelsWebhook as $catVal => $catLabel): ?>
+                                                        <option value="<?= $catVal ?>" <?= (($linha['categoria'] ?? '') === $catVal) ? 'selected' : '' ?>><?= $catLabel ?></option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                                <select name="regras[<?= htmlspecialchars($tipoEvento) ?>][<?= (int)$idx ?>][modo_exibicao]" class="form-control" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.45rem; font-size: 0.78rem; color: var(--text-primary);">
+                                                    <?php foreach ($modosLabelsWebhook as $modoVal => $modoLabel): ?>
+                                                        <option value="<?= $modoVal ?>" <?= (($linha['modo_exibicao'] ?? '') === $modoVal) ? 'selected' : '' ?>><?= $modoLabel ?></option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                                <button type="button" class="btn-inspect btn-remover-linha-regra" style="font-size: 0.7rem; padding: 0.35rem 0.5rem; border-radius: 6px; background: rgba(255, 71, 87, 0.15); border-color: rgba(255, 71, 87, 0.3); color: var(--color-atendimento);">✕</button>
+                                            </div>
                                         </div>
                                     <?php endforeach; ?>
                                 </div>
@@ -714,7 +731,9 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
                                         </span>
                                     </div>
                                 <?php endif; ?>
-                            </div>
+
+                                </div>
+                            </details>
                         <?php endforeach; ?>
 
                         <button type="submit" class="btn-premium" style="width: 100%; margin: 0; padding: 0.7rem; font-weight: 600;">
@@ -1016,6 +1035,14 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
         });
     });
 
+    // Regras de Webhook: gira a seta de cada bloco de evento (acordeão) ao abrir/fechar
+    document.querySelectorAll('.webhook-regra-grupo').forEach(function(det) {
+        const seta = det.querySelector('summary .webhook-regra-seta');
+        det.addEventListener('toggle', function() {
+            if (seta) seta.textContent = det.open ? '▼' : '▶';
+        });
+    });
+
     // Regras de Webhook: adicionar/remover linhas de condição dinamicamente
     document.addEventListener('click', function(e) {
         const btnAdd = e.target.closest('.btn-adicionar-linha-regra');
@@ -1027,20 +1054,25 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
 
             const novaLinha = document.createElement('div');
             novaLinha.className = 'webhook-regra-linha';
-            novaLinha.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 0.5rem; align-items: center;';
+            novaLinha.style.cssText = 'display: flex; flex-direction: column; gap: 0.4rem; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 8px;';
             novaLinha.innerHTML = `
-                <input type="text" name="regras[${tipoEvento}][${novoIndice}][condicao]" placeholder="Palavras-chave (vazio = sempre)" class="form-control" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.45rem; font-size: 0.78rem; color: var(--text-primary);">
-                <select name="regras[${tipoEvento}][${novoIndice}][categoria]" class="form-control" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.45rem; font-size: 0.78rem; color: var(--text-primary);">
-                    <?php foreach ($categoriasLabelsWebhook as $catVal => $catLabel): ?>
-                        <option value="<?= $catVal ?>"><?= $catLabel ?></option>
-                    <?php endforeach; ?>
-                </select>
-                <select name="regras[${tipoEvento}][${novoIndice}][modo_exibicao]" class="form-control" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.45rem; font-size: 0.78rem; color: var(--text-primary);">
-                    <?php foreach ($modosLabelsWebhook as $modoVal => $modoLabel): ?>
-                        <option value="<?= $modoVal ?>"><?= $modoLabel ?></option>
-                    <?php endforeach; ?>
-                </select>
-                <button type="button" class="btn-inspect btn-remover-linha-regra" style="font-size: 0.7rem; padding: 0.35rem 0.5rem; border-radius: 6px; background: rgba(255, 71, 87, 0.15); border-color: rgba(255, 71, 87, 0.3); color: var(--color-atendimento);">✕</button>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                    <input type="text" name="regras[${tipoEvento}][${novoIndice}][condicao]" placeholder="Palavras-chave (vazio = sempre)" class="form-control" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.45rem; font-size: 0.78rem; color: var(--text-primary);">
+                    <input type="text" name="regras[${tipoEvento}][${novoIndice}][rotulo]" placeholder="Rótulo customizado (opcional, padrão = nome da categoria)" maxlength="60" class="form-control" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.45rem; font-size: 0.78rem; color: var(--text-primary);">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.5rem; align-items: center;">
+                    <select name="regras[${tipoEvento}][${novoIndice}][categoria]" class="form-control" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.45rem; font-size: 0.78rem; color: var(--text-primary);">
+                        <?php foreach ($categoriasLabelsWebhook as $catVal => $catLabel): ?>
+                            <option value="<?= $catVal ?>"><?= $catLabel ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <select name="regras[${tipoEvento}][${novoIndice}][modo_exibicao]" class="form-control" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.45rem; font-size: 0.78rem; color: var(--text-primary);">
+                        <?php foreach ($modosLabelsWebhook as $modoVal => $modoLabel): ?>
+                            <option value="<?= $modoVal ?>"><?= $modoLabel ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <button type="button" class="btn-inspect btn-remover-linha-regra" style="font-size: 0.7rem; padding: 0.35rem 0.5rem; border-radius: 6px; background: rgba(255, 71, 87, 0.15); border-color: rgba(255, 71, 87, 0.3); color: var(--color-atendimento);">✕</button>
+                </div>
             `;
 
             // As regras são avaliadas de cima para baixo, e a última linha costuma ser a curinga
