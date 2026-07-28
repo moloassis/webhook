@@ -623,6 +623,9 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
                                 Ao clicar em <strong style="color: var(--text-primary);">"+ Adicionar condição"</strong>, a nova linha já é inserida automaticamente <strong>antes</strong> da curinga do bloco — você só precisa preencher a palavra-chave e escolher categoria/modo de exibição.
                             </div>
                             <div>
+                                <strong style="color: var(--text-primary);">Chamado ativo já existente:</strong> se o cliente já tem um alerta aberto (pendente ou aguardando) e chega um novo evento para ele, por padrão o sistema apenas <strong>unifica</strong> (ignora o novo evento) para não duplicar. Isso pode fazer com que uma mudança importante passe despercebida. Use a opção <strong style="color: var(--text-primary);">"Sempre notificar"</strong> logo abaixo se preferir que todo evento gere um alerta novo e atualizado, mesmo já existindo um em aberto.
+                            </div>
+                            <div>
                                 Use <strong style="color: var(--text-primary);">"Restaurar Padrão do Sistema"</strong> para apagar toda a customização e voltar ao comportamento original.
                             </div>
                         </div>
@@ -659,6 +662,23 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
                     <form id="webhookRulesForm" action="<?php echo htmlspecialchars($_SERVER['REQUEST_URI'], ENT_QUOTES, 'UTF-8'); ?>" method="POST" style="display: flex; flex-direction: column; gap: 1.4rem;">
                         <?php echo renderizarCampoCSRF(); ?>
                         <input type="hidden" name="action" value="save_webhook_rules">
+
+                        <div style="border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem; display: flex; flex-direction: column; gap: 0.6rem;">
+                            <span class="label-text" style="font-weight: 600; font-size: 0.85rem; color: var(--text-primary);">
+                                Quando um evento chega e já existe um chamado ativo para o mesmo cliente
+                            </span>
+                            <span class="label-text" style="font-size: 0.74rem; color: var(--text-secondary);">
+                                Não se aplica a mudanças de card no CRM (Kanban) — essas sempre geram um alerta novo e atualizado, pois representam uma mudança real de etapa.
+                            </span>
+                            <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer;">
+                                <input type="radio" name="dedup_modo" value="unificar" style="margin-top: 3px;" <?= ($webhookDedupModo !== 'sempre_notificar') ? 'checked' : '' ?>>
+                                <span class="label-text" style="font-size: 0.8rem;"><strong>Unificar (padrão)</strong> — ignora o novo evento, mantendo apenas o alerta já ativo.</span>
+                            </label>
+                            <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer;">
+                                <input type="radio" name="dedup_modo" value="sempre_notificar" style="margin-top: 3px;" <?= ($webhookDedupModo === 'sempre_notificar') ? 'checked' : '' ?>>
+                                <span class="label-text" style="font-size: 0.8rem;"><strong>Sempre notificar</strong> — resolve o alerta anterior e cria um novo, atualizado, para qualquer tipo de evento.</span>
+                            </label>
+                        </div>
 
                         <?php foreach ($eventosLabelsWebhook as $tipoEvento => $labelEvento): ?>
                             <div class="webhook-regra-grupo" data-tipo-evento="<?= htmlspecialchars($tipoEvento) ?>" style="border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem; display: flex; flex-direction: column; gap: 0.7rem;">

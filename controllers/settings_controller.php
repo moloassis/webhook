@@ -348,6 +348,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // AÇÃO: Salvar Regras de Webhook (categoria + modo de exibição por tipo de evento)
         elseif ($action === 'save_webhook_rules') {
+            $dedupModo = isset($_POST['dedup_modo']) ? trim($_POST['dedup_modo']) : 'unificar';
+            if (!in_array($dedupModo, ['unificar', 'sempre_notificar'], true)) {
+                $dedupModo = 'unificar';
+            }
+            $okDedup = salvarConfiguracao('webhook_dedup_modo', $dedupModo, $empresaId);
+
             $regrasPost = isset($_POST['regras']) && is_array($_POST['regras']) ? $_POST['regras'] : [];
             $tiposConhecidos = array_keys(regrasPadraoWebhook());
             $eventosValidados = [];
@@ -396,8 +402,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $statusQuery = 'error=' . urlencode('Nenhuma regra válida foi enviada.');
             } else {
                 $estrutura = ['schema_version' => 1, 'eventos' => $eventosValidados];
-                $ok = salvarConfiguracao('webhook_event_rules', json_encode($estrutura, JSON_UNESCAPED_UNICODE), $empresaId);
-                $statusQuery = $ok
+                $okRegras = salvarConfiguracao('webhook_event_rules', json_encode($estrutura, JSON_UNESCAPED_UNICODE), $empresaId);
+                $statusQuery = ($okRegras && $okDedup)
                     ? 'success=' . urlencode('Regras de webhook salvas com sucesso!')
                     : 'error=' . urlencode('Falha ao salvar as regras de webhook.');
             }
@@ -405,8 +411,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // AÇÃO: Restaurar Regras de Webhook para o padrão do sistema
         elseif ($action === 'reset_webhook_rules') {
-            $ok = removerConfiguracao('webhook_event_rules', $empresaId);
-            $statusQuery = $ok
+            $ok1 = removerConfiguracao('webhook_event_rules', $empresaId);
+            $ok2 = removerConfiguracao('webhook_dedup_modo', $empresaId);
+            $statusQuery = ($ok1 && $ok2)
                 ? 'success=' . urlencode('Regras de webhook restauradas para o padrão do sistema!')
                 : 'error=' . urlencode('Falha ao restaurar as regras de webhook.');
         }
@@ -685,6 +692,7 @@ $somLeadNome = basename($somLead);
 // Regras de webhook (categoria + modo de exibição por tipo de evento) — já cai no padrão se o tenant não customizou
 $webhookRegras = obterRegrasWebhook($empresaId);
 $webhookRegrasCustomizadas = !empty(obterConfiguracao('webhook_event_rules', null, $empresaId));
+$webhookDedupModo = obterConfiguracao('webhook_dedup_modo', 'unificar', $empresaId);
 
 // CRM settings
 $crmIntegrationEnabled = obterConfiguracao('crm_integration_enabled', '0', $empresaId);

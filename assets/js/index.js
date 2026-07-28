@@ -6,6 +6,7 @@
         let filterActive = 'todos';
         const alertasEnviados = new Set();
         const alertasAtrasadosMinimizadosLocais = new Set();
+        let ultimoGridAssinatura = ''; // Evita recriar o grid inteiro (e "piscar" a tela) quando nada relevante mudou
         
         // Calcula a diferença de relógio (skew) entre o navegador e o servidor
         let clockSkew = 0;
@@ -720,117 +721,134 @@
             const itensFiltrados = chamadosList.filter(item => {
                 if (filterActive === 'todos') return true;
                 const estilo = obterEstiloEvento(item);
-                
+
                 if (filterActive === 'atendimento_humano') return estilo.classe === 'type-atendimento_humano';
                 if (filterActive === 'novo_lead') return estilo.classe === 'type-novo_lead';
                 if (filterActive === 'alerta_sistema') return estilo.classe === 'type-alerta_sistema';
                 return false;
             });
 
-            // Limpa o grid
-            alertsGrid.innerHTML = '';
-
             if (itensFiltrados.length === 0) {
+                alertsGrid.innerHTML = '';
                 alertsGrid.appendChild(emptyState);
                 emptyState.style.display = 'flex';
+                ultimoGridAssinatura = '';
+                gerenciarAlertasSonorosUrgentes();
                 return;
             }
 
             emptyState.style.display = 'none';
 
-             // Montar cada card dinamicamente
-             itensFiltrados.forEach(item => {
-                 const estilo = obterEstiloEvento(item);
-                 const card = document.createElement('div');
-                 card.className = `alert-card ${estilo.classe}`;
-                 
-                 // Obter dados dinâmicos do estilo
-                 const icon = estilo.icon;
-                 const labelTipo = estilo.label;
- 
-                 // Formatar data e hora
-                 const horaFormatada = formatarDataHora(item.criado_em);
- 
-                 // Calcula tempo de espera em minutos para atendimento humano (ajustado pelo clockSkew do servidor)
-                 const criadoEmDate = new Date(item.criado_em.replace(/-/g, "/"));
-                 const adjustedNow = new Date(new Date().getTime() - clockSkew);
-                 const diffSeconds = Math.floor((adjustedNow - criadoEmDate) / 1000);
-                 const diffMinutes = Math.floor(diffSeconds / 60);
-                 const limiteMinutos = (window.SYSTEM_CONFIG && window.SYSTEM_CONFIG.tempoLimiteEspera) ? parseInt(window.SYSTEM_CONFIG.tempoLimiteEspera, 10) : 5;
- 
-                 let waitingHTML = '';
-                 if (estilo.classe === 'type-atendimento_humano') {
-                     if (diffMinutes >= limiteMinutos) {
-                         waitingHTML = `<span class="waiting-badge warning" style="animation: pulse-border 1.5s infinite; background: rgba(255, 71, 87, 0.15); color: #ff4757; font-weight: 600; font-size: 0.72rem; padding: 0.2rem 0.5rem; border-radius: 6px; border: 1px solid rgba(255, 71, 87, 0.3); display: inline-flex; align-items: center; gap: 4px;">⚠️ SEM RESPOSTA HÁ ${diffMinutes}m</span>`;
+            // (limiteMinutos já foi declarado no início desta função, para o cálculo de "chamadoAtrasado")
+            const userRole = (window.SYSTEM_CONFIG && window.SYSTEM_CONFIG.userRole) ? window.SYSTEM_CONFIG.userRole : 'user';
+            const isAdmin = (userRole === 'admin' || userRole === 'superadmin');
 
-                         // Modo "silencioso" é absoluto: mostra o badge, mas nunca dispara som/notificação/push de escalonamento
-                         if (item.modo_exibicao !== 'silencioso' && !alertasEnviados.has(item.id)) {
-                             alertasEnviados.add(item.id);
-                             
-                             // Dispara som de alerta urgente imediatamente
-                             tocarAlertaSonoro('atendimento_humano');
-                             
-                             // Dispara notificação do navegador se permitido
-                             if (Notification.permission === 'granted') {
-                                 try {
-                                     new Notification("🚨 Alerta de Espera - Central de Alertas", {
-                                         body: `O cliente "${item.nome_cliente || 'Desconhecido'}" está aguardando atendimento humano há mais de ${limiteMinutos} minutos!`,
-                                         icon: 'assets/img/icon_192.png'
-                                     });
-                                 } catch (err) {
-                                     console.error("Erro ao disparar notificação de mesa:", err);
-                                 }
-                             }
-                             
-                             // Envia o alerta push para os administradores da empresa via backend
-                             fetch('alerta_atraso.php?id=' + item.id, { method: 'POST' })
-                                 .then(res => res.json())
-                                 .then(resData => {
-                                     console.log('Alerta de atraso enviado via push:', resData);
-                                 })
-                                 .catch(err => console.error('Erro ao enviar alerta de atraso push:', err));
-                         }
-                     } else {
-                         waitingHTML = `<span class="waiting-badge" style="background: rgba(30, 144, 255, 0.1); color: var(--color-default); font-weight: 500; font-size: 0.72rem; padding: 0.2rem 0.5rem; border-radius: 6px; border: 1px solid rgba(30, 144, 255, 0.2); display: inline-flex; align-items: center; gap: 4px;">⏱️ Esperando há ${diffMinutes}m</span>`;
-                     }
-                 }
- 
-                 let actionsHTML = '';
-                 if (item.session_id) {
-                     const labelText = item.session_id.startsWith('contact:') ? 'Ver Contato 👤' : 'Atender 💬';
-                     actionsHTML += `<a href="${obterUrlChat(item.session_id)}" target="_blank" class="btn-action btn-open-chat" onclick="resolverChamadoSilencioso(${item.id}, this)">${labelText}</a>`;
-                 }
+            // Pré-computa estilo/badge de espera e dispara os efeitos colaterais (som/notificação/push de atraso),
+            // independentemente de o grid precisar ser recriado ou não — isso sempre roda a cada chamada.
+            const dadosPorItem = itensFiltrados.map(item => {
+                const estilo = obterEstiloEvento(item);
 
-                 // Regra de segurança: se o chamado está no status 'aguardando', apenas administradores podem dispensá-lo manualmente
-                 const userRole = (window.SYSTEM_CONFIG && window.SYSTEM_CONFIG.userRole) ? window.SYSTEM_CONFIG.userRole : 'user';
-                 const isAdmin = (userRole === 'admin' || userRole === 'superadmin');
-                 if (item.status !== 'aguardando' || isAdmin) {
-                     actionsHTML += `<button class="btn-action btn-resolve" onclick="resolverChamado(${item.id}, this)">Dispensar</button>`;
-                 }
- 
-                 card.innerHTML = `
-                     <div class="card-details">
-                         <div class="card-icon">${icon}</div>
-                         <div class="card-info">
-                             <div class="card-header-row">
-                                 <span class="client-name">${item.nome_cliente || 'N/A'}</span>
-                                 <span class="badge-type">${labelTipo}</span>
-                                 ${waitingHTML}
-                                 <span class="card-time">🕒 ${horaFormatada}</span>
-                             </div>
-                             <p class="card-msg">${item.mensagem || 'Sem mensagem descritiva.'}</p>
-                         </div>
-                     </div>
-                     <div class="card-actions">
-                         ${actionsHTML}
-                     </div>
-                 `;
-                 alertsGrid.appendChild(card);
-             });
+                // Calcula tempo de espera em minutos para atendimento humano (ajustado pelo clockSkew do servidor)
+                const criadoEmDate = new Date(item.criado_em.replace(/-/g, "/"));
+                const adjustedNow = new Date(new Date().getTime() - clockSkew);
+                const diffMinutes = Math.floor((adjustedNow - criadoEmDate) / 60000);
+
+                let waitingHTML = '';
+                if (estilo.classe === 'type-atendimento_humano') {
+                    if (diffMinutes >= limiteMinutos) {
+                        waitingHTML = `<span class="waiting-badge warning" style="animation: pulse-border 1.5s infinite; background: rgba(255, 71, 87, 0.15); color: #ff4757; font-weight: 600; font-size: 0.72rem; padding: 0.2rem 0.5rem; border-radius: 6px; border: 1px solid rgba(255, 71, 87, 0.3); display: inline-flex; align-items: center; gap: 4px;">⚠️ SEM RESPOSTA HÁ ${diffMinutes}m</span>`;
+
+                        // Modo "silencioso" é absoluto: mostra o badge, mas nunca dispara som/notificação/push de escalonamento
+                        if (item.modo_exibicao !== 'silencioso' && !alertasEnviados.has(item.id)) {
+                            alertasEnviados.add(item.id);
+
+                            // Dispara som de alerta urgente imediatamente
+                            tocarAlertaSonoro('atendimento_humano');
+
+                            // Dispara notificação do navegador se permitido
+                            if (Notification.permission === 'granted') {
+                                try {
+                                    new Notification("🚨 Alerta de Espera - Central de Alertas", {
+                                        body: `O cliente "${item.nome_cliente || 'Desconhecido'}" está aguardando atendimento humano há mais de ${limiteMinutos} minutos!`,
+                                        icon: 'assets/img/icon_192.png'
+                                    });
+                                } catch (err) {
+                                    console.error("Erro ao disparar notificação de mesa:", err);
+                                }
+                            }
+
+                            // Envia o alerta push para os administradores da empresa via backend
+                            fetch('alerta_atraso.php?id=' + item.id, { method: 'POST' })
+                                .then(res => res.json())
+                                .then(resData => {
+                                    console.log('Alerta de atraso enviado via push:', resData);
+                                })
+                                .catch(err => console.error('Erro ao enviar alerta de atraso push:', err));
+                        }
+                    } else {
+                        waitingHTML = `<span class="waiting-badge" style="background: rgba(30, 144, 255, 0.1); color: var(--color-default); font-weight: 500; font-size: 0.72rem; padding: 0.2rem 0.5rem; border-radius: 6px; border: 1px solid rgba(30, 144, 255, 0.2); display: inline-flex; align-items: center; gap: 4px;">⏱️ Esperando há ${diffMinutes}m</span>`;
+                    }
+                }
+
+                return { item, estilo, waitingHTML };
+            });
+
+            // Só recria o grid inteiro (e "pisca" a tela) se a lista de itens/status realmente mudou desde o
+            // último render. Caso contrário, só atualiza o texto dos badges de espera nos cards já existentes.
+            const assinaturaAtual = itensFiltrados.map(i => i.id + ':' + i.status).join(',');
+            const precisaRecriar = (assinaturaAtual !== ultimoGridAssinatura) || (alertsGrid.children.length !== itensFiltrados.length);
+
+            if (!precisaRecriar) {
+                dadosPorItem.forEach(({ item, waitingHTML }) => {
+                    const slot = alertsGrid.querySelector('.alert-card[data-id="' + item.id + '"] .waiting-slot');
+                    if (slot) slot.innerHTML = waitingHTML;
+                });
+            } else {
+                alertsGrid.innerHTML = '';
+
+                dadosPorItem.forEach(({ item, estilo, waitingHTML }) => {
+                    const card = document.createElement('div');
+                    card.className = `alert-card ${estilo.classe}`;
+                    card.dataset.id = item.id;
+
+                    const horaFormatada = formatarDataHora(item.criado_em);
+
+                    let actionsHTML = '';
+                    if (item.session_id) {
+                        const labelText = item.session_id.startsWith('contact:') ? 'Ver Contato 👤' : 'Atender 💬';
+                        actionsHTML += `<a href="${obterUrlChat(item.session_id)}" target="_blank" class="btn-action btn-open-chat" onclick="resolverChamadoSilencioso(${item.id}, this)">${labelText}</a>`;
+                    }
+
+                    // Regra de segurança: se o chamado está no status 'aguardando', apenas administradores podem dispensá-lo manualmente
+                    if (item.status !== 'aguardando' || isAdmin) {
+                        actionsHTML += `<button class="btn-action btn-resolve" onclick="resolverChamado(${item.id}, this)">Dispensar</button>`;
+                    }
+
+                    card.innerHTML = `
+                        <div class="card-details">
+                            <div class="card-icon">${estilo.icon}</div>
+                            <div class="card-info">
+                                <div class="card-header-row">
+                                    <span class="client-name">${item.nome_cliente || 'N/A'}</span>
+                                    <span class="badge-type">${estilo.label}</span>
+                                    <span class="waiting-slot">${waitingHTML}</span>
+                                    <span class="card-time">🕒 ${horaFormatada}</span>
+                                </div>
+                                <p class="card-msg">${item.mensagem || 'Sem mensagem descritiva.'}</p>
+                            </div>
+                        </div>
+                        <div class="card-actions">
+                            ${actionsHTML}
+                        </div>
+                    `;
+                    alertsGrid.appendChild(card);
+                });
+
+                ultimoGridAssinatura = assinaturaAtual;
+            }
 
             // Gerencia a reprodução repetitiva da sirene para chamados urgentes ativos
-            gerenciarAlertasSonorosUrgentes();
-        }
+            gerenciarAlertasSonorosUrgentes();        }
 
         // Inicia ou para o cronômetro da sirene baseado nos chamados urgentes ativos
         function gerenciarAlertasSonorosUrgentes() {

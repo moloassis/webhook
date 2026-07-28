@@ -314,3 +314,119 @@
 }
 ============================================================
 
+============================================================
+{
+    "data": "2026-07-28 11:48:00",
+    "ip": "127.0.0.1",
+    "metodo": "POST",
+    "headers": {
+        "Host": "127.0.0.1:8099",
+        "User-Agent": "curl/8.16.0",
+        "Accept": "*/*",
+        "Content-Type": "application/json",
+        "Content-Length": "119"
+    },
+    "get": {
+        "token": "c17d3bb84988b43a231d6846c5deae2f"
+    },
+    "post_bruto": "{\"eventType\":\"SESSION_NEW\",\"content\":{\"contactDetails\":{\"name\":\"Teste Dedup\",\"phonenumberFormatted\":\"+5511911112222\"}}}",
+    "post_decodificado": {
+        "eventType": "SESSION_NEW",
+        "content": {
+            "contactDetails": {
+                "name": "Teste Dedup",
+                "phonenumberFormatted": "+5511911112222"
+            }
+        }
+    }
+}
+============================================================
+
+============================================================
+{
+    "data": "2026-07-28 11:48:01",
+    "ip": "127.0.0.1",
+    "metodo": "POST",
+    "headers": {
+        "Host": "127.0.0.1:8099",
+        "User-Agent": "curl/8.16.0",
+        "Accept": "*/*",
+        "Content-Type": "application/json",
+        "Content-Length": "158"
+    },
+    "get": {
+        "token": "c17d3bb84988b43a231d6846c5deae2f"
+    },
+    "post_bruto": "{\"eventType\":\"PANEL_CARD_NEW\",\"content\":{\"id\":\"card-dedup-1\",\"contacts\":[{\"name\":\"Teste Dedup\"}],\"stepTitle\":\"Atendimento Humano\",\"sessionId\":\"sess-dedup-1\"}}",
+    "post_decodificado": {
+        "eventType": "PANEL_CARD_NEW",
+        "content": {
+            "id": "card-dedup-1",
+            "contacts": [
+                {
+                    "name": "Teste Dedup"
+                }
+            ],
+            "stepTitle": "Atendimento Humano",
+            "sessionId": "sess-dedup-1"
+        }
+    }
+}
+============================================================
+
+============================================================
+{
+    "data": "2026-07-28 11:48:27",
+    "ip": "127.0.0.1",
+    "metodo": "POST",
+    "headers": {
+        "Host": "127.0.0.1:8099",
+        "User-Agent": "curl/8.16.0",
+        "Accept": "*/*",
+        "Content-Type": "application/json",
+        "Content-Length": "119"
+    },
+    "get": {
+        "token": "c17d3bb84988b43a231d6846c5deae2f"
+    },
+    "post_bruto": "{\"eventType\":\"SESSION_NEW\",\"content\":{\"contactDetails\":{\"name\":\"Teste Dedup\",\"phonenumberFormatted\":\"+5511911112222\"}}}",
+    "post_decodificado": {
+        "eventType": "SESSION_NEW",
+        "content": {
+            "contactDetails": {
+                "name": "Teste Dedup",
+                "phonenumberFormatted": "+5511911112222"
+            }
+        }
+    }
+}
+============================================================
+
+============================================================
+{
+    "data": "2026-07-28 12:47:35",
+    "ip": "127.0.0.1",
+    "metodo": "POST",
+    "headers": {
+        "Host": "127.0.0.1:8099",
+        "User-Agent": "curl/8.16.0",
+        "Accept": "*/*",
+        "Content-Type": "application/json",
+        "Content-Length": "119"
+    },
+    "get": {
+        "token": "c17d3bb84988b43a231d6846c5deae2f"
+    },
+    "post_bruto": "{\"eventType\":\"SESSION_NEW\",\"content\":{\"contactDetails\":{\"name\":\"Teste Dedup\",\"phonenumberFormatted\":\"+5511911112222\"}}}",
+    "post_decodificado": {
+        "eventType": "SESSION_NEW",
+        "content": {
+            "contactDetails": {
+                "name": "Teste Dedup",
+                "phonenumberFormatted": "+5511911112222"
+            }
+        }
+    }
+}
+============================================================
+

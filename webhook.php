@@ -330,14 +330,20 @@ if ($criarChamadoAtivo) {
             if ($existingChamado) {
                 // Se a mensagem do novo evento for a mesma do chamado ativo existente,
                 // significa que é apenas um webhook duplicado para a mesma ação (ex: STEP_CHANGE + UPDATE).
-                // Nesse caso, apenas unificamos sem gerar novos chamados ou excluir o atual.
+                // Nesse caso, apenas unificamos sem gerar novos chamados ou excluir o atual (sempre, independente de configuração).
                 if ($mensagem === $existingChamado['mensagem']) {
                     enviarRespostaELog(200, true, "Chamado ativo já existente com a mesma mensagem. Evento unificado sem alterações.", null, $dadosBrutos, $dados, (int)$empresaId);
                 }
 
-                // Se for alteração de etapa do card no CRM (Kanban) para uma nova etapa, resolvemos o chamado anterior
-                // para que o novo estágio seja inserido e gere um novo alerta visual/sonoro atualizado.
-                if ($eventType === 'PANEL_CARD_STEP_CHANGE' || $eventType === 'PANEL_CARD_UPDATE') {
+                // Eventos de mudança de card no CRM (Kanban) sempre resolvem o chamado anterior e criam um novo alerta
+                // atualizado, já que representam uma mudança real de etapa/estado do card, não uma duplicata.
+                $ehMudancaDeCard = in_array($eventType, ['PANEL_CARD_STEP_CHANGE', 'PANEL_CARD_UPDATE', 'PANEL_CARD_NEW'], true);
+
+                // Configuração do tenant: "unificar" (padrão) ignora o novo evento se já existir chamado ativo
+                // para o mesmo contato; "sempre_notificar" resolve o antigo e sempre cria um alerta novo e atualizado.
+                $modoDedup = obterConfiguracao('webhook_dedup_modo', 'unificar', $empresaId);
+
+                if ($ehMudancaDeCard || $modoDedup === 'sempre_notificar') {
                     $sqlResolve = "UPDATE chamados SET status = 'resolvido' WHERE status IN ('pendente', 'aguardando') AND empresa_id = :empresa_id AND (";
                     $sqlResolve .= implode(" OR ", $conds) . ")";
                     $stmtResolve = $db->prepare($sqlResolve);
