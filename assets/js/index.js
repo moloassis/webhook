@@ -834,13 +834,26 @@
 
         // Inicia ou para o cronômetro da sirene baseado nos chamados urgentes ativos
         function gerenciarAlertasSonorosUrgentes() {
+            const limiteMinutos = (window.SYSTEM_CONFIG && window.SYSTEM_CONFIG.tempoLimiteEspera) ? parseInt(window.SYSTEM_CONFIG.tempoLimiteEspera, 10) : 5;
+
             const temUrgente = chamadosList.some(c => {
                 if (c.modo_exibicao === 'silencioso') return false; // modo silencioso é absoluto: nunca repete sirene
                 // Usuário sem permissão para resolver um chamado "aguardando" pode dispensar o modal localmente
                 // (minimizarAlertaAtrasoLocal); isso deve parar a sirene repetida também, não só esconder o modal.
                 if (alertasAtrasadosMinimizadosLocais.has(c.id)) return false;
+
                 const estilo = obterEstiloEvento(c);
-                return estilo.classe === 'type-atendimento_humano';
+                if (estilo.classe !== 'type-atendimento_humano') return false;
+
+                // Ainda não foi visto/dispensado: sirene deve tocar.
+                if (c.status === 'pendente') return true;
+
+                // Já foi dispensado ("aguardando"): fica em silêncio, A MENOS que ultrapasse o prazo de espera
+                // configurado — nesse caso volta a soar, mesma regra usada pelo modal de atraso.
+                const criadoEmDate = new Date(c.criado_em.replace(/-/g, "/"));
+                const adjustedNow = new Date(new Date().getTime() - clockSkew);
+                const diffMinutes = Math.floor((adjustedNow - criadoEmDate) / 60000);
+                return diffMinutes >= limiteMinutos;
             });
 
             if (temUrgente) {
