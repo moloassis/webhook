@@ -219,7 +219,9 @@ if ($eventType) {
             break;
 
         case 'CONTACT_TAG_UPDATE':
-            $tipoEvent = 'CONTACT_TAG_UPDATE';
+        case 'CONTACT_UPDATE':
+            // CONTACT_UPDATE é a variante que o CRM também envia para atualizações gerais de contato/tags
+            $tipoEvent = $eventType;
             $nomeCliente = $dados['content']['name'] ?? 'Desconhecido';
             $tags = $dados['content']['tags'] ?? [];
 
@@ -232,22 +234,30 @@ if ($eventType) {
             break;
 
         case 'SESSION_COMPLETE':
-            $tipoEvent = 'SESSION_COMPLETE';
+        case 'SESSION_UPDATE':
+            // SESSION_UPDATE é a variante enviada durante a conversa (não apenas ao finalizar)
+            $tipoEvent = $eventType;
             $nomeCliente = $dados['content']['contactDetails']['name'] ?? 'Desconhecido';
             $lastText = $dados['content']['lastMessageText'] ?? '';
 
             $textoBusca = $lastText;
-            $mensagem = "Sessão do chatbot finalizada. Última msg: \"{$lastText}\"";
+            $mensagem = ($eventType === 'SESSION_COMPLETE')
+                ? "Sessão do chatbot finalizada. Última msg: \"{$lastText}\""
+                : "Sessão atualizada durante o atendimento. Última msg: \"{$lastText}\"";
             break;
 
         case 'PANEL_CARD_STEP_CHANGE':
         case 'PANEL_CARD_UPDATE':
-            $tipoEvent = $eventType; // PANEL_CARD_STEP_CHANGE ou PANEL_CARD_UPDATE
+        case 'PANEL_CARD_NEW':
+            // PANEL_CARD_NEW é enviado quando o card já nasce diretamente numa etapa (sem STEP_CHANGE prévio)
+            $tipoEvent = $eventType;
             $nomeCliente = $dados['content']['contacts'][0]['name'] ?? ($dados['content']['title'] ?? 'Lead');
             $stepTitle = $dados['content']['stepTitle'] ?? '';
 
             $textoBusca = $stepTitle;
-            $mensagem = "Card movido no CRM para: \"{$stepTitle}\"";
+            $mensagem = ($eventType === 'PANEL_CARD_NEW')
+                ? "Novo card criado no CRM na etapa: \"{$stepTitle}\""
+                : "Card movido no CRM para: \"{$stepTitle}\"";
             break;
 
         default:
@@ -263,11 +273,13 @@ if ($eventType) {
     $modoExibicao = $resultadoRegra['modo_exibicao'];
 
     // Ajusta a redação da mensagem/log conforme a categoria resultante (apenas texto, não reclassifica)
-    if ($eventType === 'CONTACT_TAG_UPDATE' && $categoria === 'atendimento_humano') {
+    if (in_array($eventType, ['CONTACT_TAG_UPDATE', 'CONTACT_UPDATE'], true) && $categoria === 'atendimento_humano') {
         $mensagem = "Cliente etiquetado para Atendimento Humano no CRM.";
     } elseif ($eventType === 'SESSION_COMPLETE' && $categoria === 'atendimento_humano') {
         $mensagem = "Chatbot finalizado para transferência humana. Última msg: \"{$lastText}\"";
-    } elseif (in_array($eventType, ['PANEL_CARD_STEP_CHANGE', 'PANEL_CARD_UPDATE'], true)) {
+    } elseif ($eventType === 'SESSION_UPDATE' && $categoria === 'atendimento_humano') {
+        $mensagem = "Cliente solicitou atendimento humano durante a conversa. Última msg: \"{$lastText}\"";
+    } elseif (in_array($eventType, ['PANEL_CARD_STEP_CHANGE', 'PANEL_CARD_UPDATE', 'PANEL_CARD_NEW'], true)) {
         if ($categoria === 'atendimento_humano') {
             $mensagem = "Lead transferido para suporte humano na coluna: \"{$stepTitle}\"";
         } elseif ($categoria === 'novo_lead') {

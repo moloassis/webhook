@@ -25,7 +25,17 @@ function regrasPadraoWebhook(): array
             ['condicao_palavras' => 'atendimento humano', 'categoria' => 'atendimento_humano', 'modo_exibicao' => 'urgente_fullscreen'],
             ['condicao_palavras' => '', 'categoria' => 'ignorar', 'modo_exibicao' => 'normal'],
         ],
+        // CONTACT_UPDATE: variante enviada pelo CRM para atualizações gerais de contato/tags (mesma lógica de CONTACT_TAG_UPDATE)
+        'CONTACT_UPDATE' => [
+            ['condicao_palavras' => 'atendimento humano', 'categoria' => 'atendimento_humano', 'modo_exibicao' => 'urgente_fullscreen'],
+            ['condicao_palavras' => '', 'categoria' => 'ignorar', 'modo_exibicao' => 'normal'],
+        ],
         'SESSION_COMPLETE' => [
+            ['condicao_palavras' => 'transferida,aguarde,humano,suporte', 'categoria' => 'atendimento_humano', 'modo_exibicao' => 'urgente_fullscreen'],
+            ['condicao_palavras' => '', 'categoria' => 'ignorar', 'modo_exibicao' => 'normal'],
+        ],
+        // SESSION_UPDATE: variante enviada durante a conversa em andamento (mesma lógica de SESSION_COMPLETE)
+        'SESSION_UPDATE' => [
             ['condicao_palavras' => 'transferida,aguarde,humano,suporte', 'categoria' => 'atendimento_humano', 'modo_exibicao' => 'urgente_fullscreen'],
             ['condicao_palavras' => '', 'categoria' => 'ignorar', 'modo_exibicao' => 'normal'],
         ],
@@ -35,6 +45,12 @@ function regrasPadraoWebhook(): array
             ['condicao_palavras' => '', 'categoria' => 'ignorar', 'modo_exibicao' => 'normal'],
         ],
         'PANEL_CARD_UPDATE' => [
+            ['condicao_palavras' => 'humano,suporte,atendente,human', 'categoria' => 'atendimento_humano', 'modo_exibicao' => 'urgente_fullscreen'],
+            ['condicao_palavras' => 'lead,ia', 'categoria' => 'novo_lead', 'modo_exibicao' => 'normal'],
+            ['condicao_palavras' => '', 'categoria' => 'ignorar', 'modo_exibicao' => 'normal'],
+        ],
+        // PANEL_CARD_NEW: card que já nasce diretamente numa etapa, sem STEP_CHANGE prévio (mesma lógica)
+        'PANEL_CARD_NEW' => [
             ['condicao_palavras' => 'humano,suporte,atendente,human', 'categoria' => 'atendimento_humano', 'modo_exibicao' => 'urgente_fullscreen'],
             ['condicao_palavras' => 'lead,ia', 'categoria' => 'novo_lead', 'modo_exibicao' => 'normal'],
             ['condicao_palavras' => '', 'categoria' => 'ignorar', 'modo_exibicao' => 'normal'],

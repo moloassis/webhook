@@ -195,3 +195,122 @@
 }
 ============================================================
 
+============================================================
+{
+    "data": "2026-07-28 00:02:10",
+    "ip": "127.0.0.1",
+    "metodo": "POST",
+    "headers": {
+        "Host": "127.0.0.1:8099",
+        "User-Agent": "curl/8.16.0",
+        "Accept": "*/*",
+        "Content-Type": "application/json",
+        "Content-Length": "190"
+    },
+    "get": {
+        "token": "c17d3bb84988b43a231d6846c5deae2f"
+    },
+    "post_bruto": "{\"eventType\":\"PANEL_CARD_NEW\",\"content\":{\"id\":\"test-card-1\",\"contacts\":[{\"name\":\"Teste PANEL_CARD_NEW\"}],\"stepTitle\":\"\\ud83d\\udc69\\ud83c\\udfff Atendimento Humano\",\"sessionId\":\"sess-test-1\"}}",
+    "post_decodificado": {
+        "eventType": "PANEL_CARD_NEW",
+        "content": {
+            "id": "test-card-1",
+            "contacts": [
+                {
+                    "name": "Teste PANEL_CARD_NEW"
+                }
+            ],
+            "stepTitle": "👩🏿 Atendimento Humano",
+            "sessionId": "sess-test-1"
+        }
+    }
+}
+============================================================
+
+============================================================
+{
+    "data": "2026-07-28 00:02:10",
+    "ip": "127.0.0.1",
+    "metodo": "POST",
+    "headers": {
+        "Host": "127.0.0.1:8099",
+        "User-Agent": "curl/8.16.0",
+        "Accept": "*/*",
+        "Content-Type": "application/json",
+        "Content-Length": "166"
+    },
+    "get": {
+        "token": "c17d3bb84988b43a231d6846c5deae2f"
+    },
+    "post_bruto": "{\"eventType\":\"SESSION_UPDATE\",\"content\":{\"id\":\"sess-test-2\",\"contactDetails\":{\"name\":\"Teste SESSION_UPDATE\"},\"lastMessageText\":\"quero falar com um atendente humano\"}}",
+    "post_decodificado": {
+        "eventType": "SESSION_UPDATE",
+        "content": {
+            "id": "sess-test-2",
+            "contactDetails": {
+                "name": "Teste SESSION_UPDATE"
+            },
+            "lastMessageText": "quero falar com um atendente humano"
+        }
+    }
+}
+============================================================
+
+============================================================
+{
+    "data": "2026-07-28 00:02:11",
+    "ip": "127.0.0.1",
+    "metodo": "POST",
+    "headers": {
+        "Host": "127.0.0.1:8099",
+        "User-Agent": "curl/8.16.0",
+        "Accept": "*/*",
+        "Content-Type": "application/json",
+        "Content-Length": "116"
+    },
+    "get": {
+        "token": "c17d3bb84988b43a231d6846c5deae2f"
+    },
+    "post_bruto": "{\"eventType\":\"CONTACT_UPDATE\",\"content\":{\"id\":\"contact-test-1\",\"name\":\"Teste CONTACT_UPDATE\",\"tags\":[\"REPESCAGEM\"]}}",
+    "post_decodificado": {
+        "eventType": "CONTACT_UPDATE",
+        "content": {
+            "id": "contact-test-1",
+            "name": "Teste CONTACT_UPDATE",
+            "tags": [
+                "REPESCAGEM"
+            ]
+        }
+    }
+}
+============================================================
+
+============================================================
+{
+    "data": "2026-07-28 00:02:19",
+    "ip": "127.0.0.1",
+    "metodo": "POST",
+    "headers": {
+        "Host": "127.0.0.1:8099",
+        "User-Agent": "curl/8.16.0",
+        "Accept": "*/*",
+        "Content-Type": "application/json",
+        "Content-Length": "132"
+    },
+    "get": {
+        "token": "c17d3bb84988b43a231d6846c5deae2f"
+    },
+    "post_bruto": "{\"eventType\":\"CONTACT_UPDATE\",\"content\":{\"id\":\"contact-test-2\",\"name\":\"Teste CONTACT_UPDATE Urgente\",\"tags\":[\"Atendimento Humano\"]}}",
+    "post_decodificado": {
+        "eventType": "CONTACT_UPDATE",
+        "content": {
+            "id": "contact-test-2",
+            "name": "Teste CONTACT_UPDATE Urgente",
+            "tags": [
+                "Atendimento Humano"
+            ]
+        }
+    }
+}
+============================================================
+

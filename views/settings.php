@@ -646,9 +646,12 @@ require_once __DIR__ . '/../controllers/settings_controller.php';
                         'MESSAGE_RECEIVED' => 'Mensagem Recebida do Cliente',
                         'MESSAGE_SENT' => 'Mensagem Enviada (IA/Atendente)',
                         'CONTACT_TAG_UPDATE' => 'Etiqueta Atualizada no CRM',
+                        'CONTACT_UPDATE' => 'Contato Atualizado no CRM',
                         'SESSION_COMPLETE' => 'Conversa com IA Finalizada',
+                        'SESSION_UPDATE' => 'Conversa Atualizada (em andamento)',
                         'PANEL_CARD_STEP_CHANGE' => 'Card Movido de Etapa (Kanban)',
                         'PANEL_CARD_UPDATE' => 'Card Atualizado (Kanban)',
+                        'PANEL_CARD_NEW' => 'Novo Card Criado (Kanban)',
                         'OUTRO' => 'Outros Eventos Não Mapeados',
                     ];
                     ?>
