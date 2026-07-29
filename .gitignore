@@ -2,6 +2,7 @@ vendor/
 .env
 .trae/
 .antigravity/
-
+.vscode/
+.claude/
 uploads/*
 !uploads/.gitkeep

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conectar WhatsApp</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="head">
+    <div class="mark" aria-hidden="true"></div>
+    <h1>Conectar WhatsApp</h1>
+    <p class="sub">Vincule este número ao seu atendimento em poucos segundos.</p>
+  </header>
+
+  <ol class="steps" id="steps">
+    <li class="step is-active" data-step="1"><span>01</span>Identificar</li>
+    <li class="step" data-step="2"><span>02</span>Escanear</li>
+    <li class="step" data-step="3"><span>03</span>Conectado</li>
+  </ol>
+
+  <main class="card">
+
+    <!-- Etapa 1: identificação -->
+    <section class="pane is-active" id="pane-id">
+      <label for="instance-name">Nome da sua empresa ou unidade</label>
+      <input type="text" id="instance-name" placeholder="Ex.: Clínica Central" autocomplete="off">
+      <p class="hint">Usamos isso só para identificar esta conexão.</p>
+      <button class="btn" id="btn-generate">Gerar QR Code</button>
+      <p class="error" id="error-id" hidden></p>
+    </section>
+
+    <!-- Etapa 2: escanear -->
+    <section class="pane" id="pane-scan">
+      <div class="qr-frame">
+        <div class="ring r1"></div>
+        <div class="ring r2"></div>
+        <div class="ring r3"></div>
+        <img id="qr-image" alt="QR Code para conectar o WhatsApp">
+        <div class="qr-loading" id="qr-loading">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+      <ol class="instructions">
+        <li>Abra o WhatsApp no celular</li>
+        <li>Toque em <strong>Configurações → Aparelhos conectados</strong></li>
+        <li>Toque em <strong>Conectar um aparelho</strong> e aponte para o código</li>
+      </ol>
+      <p class="status-line"><span class="dot" id="status-dot"></span><span id="status-text">Aguardando leitura…</span></p>
+      <button class="btn btn-ghost" id="btn-refresh">Gerar novo código</button>
+    </section>
+
+    <!-- Etapa 3: conectado -->
+    <section class="pane" id="pane-done">
+      <div class="check">
+        <svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24"/><path d="M15 27 L23 35 L38 18"/></svg>
+      </div>
+      <h2>WhatsApp conectado</h2>
+      <p class="sub">O número já está pronto para uso.</p>
+      <button class="btn btn-ghost" id="btn-disconnect">Desconectar</button>
+    </section>
+
+  </main>
+
+  <footer class="foot">Conexão segura — sua chave de acesso nunca fica exposta nesta página.</footer>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
