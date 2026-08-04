@@ -494,6 +494,9 @@
             })
             .then(data => {
                 if (data.sucesso) {
+                    // Marca o alerta como já disparado para não soar/notificar novamente
+                    alertasEnviados.add(id);
+                    
                     const card = btnElement.closest('.alert-card');
                     card.style.animation = 'fade-out 0.3s forwards';
                     
@@ -531,6 +534,9 @@
             })
             .then(data => {
                 if (data.sucesso) {
+                    // Marca o alerta como já disparado para não soar/notificar novamente
+                    alertasEnviados.add(id);
+                    
                     // Remove do array local
                     chamadosList = chamadosList.filter(item => item.id !== id);
                     
@@ -553,6 +559,9 @@
 
         // Dispensa o chamado de forma silenciosa e imediata ao clicar no link de redirecionamento
         function resolverChamadoSilencioso(id, linkElement) {
+            // Marca o alerta como já disparado para não soar/notificar novamente
+            alertasEnviados.add(id);
+            
             const card = linkElement.closest('.alert-card');
             if (card) {
                 card.style.animation = 'fade-out 0.3s forwards';
@@ -572,6 +581,9 @@
 
         // Dispensa o chamado urgente do modal de forma silenciosa e imediata
         function resolverChamadoUrgenteSilencioso(id) {
+            // Marca o alerta como já disparado para não soar/notificar novamente
+            alertasEnviados.add(id);
+            
             chamadosList = chamadosList.filter(item => item.id !== id);
             renderizarAlertas();
             atualizarContadores();
